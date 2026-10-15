@@ -27,7 +27,8 @@ export function computeReward(prediction, attemptScores) {
   const best = Math.max(...scores);
   const predicted = clamp(prediction, 0, 100);
   const diff = Math.abs(predicted - first);
-  const penalty = estimatePenalty(diff);
+  // 견적 오차 차감은 견적이 실제보다 "높았을 때"만 한다 (낮게 예상한 경우에는 빼지 않는다)
+  const penalty = estimatePenalty(Math.max(0, predicted - first));
 
   return {
     first,

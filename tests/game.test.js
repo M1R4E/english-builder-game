@@ -72,10 +72,11 @@ describe('견적 오차 차감 (최종 공사 대금)', () => {
     expect(r.finalPay).toBe(85);
   });
 
-  it('너무 낮게 예상해도 똑같이 차감한다 (견적 0, 실제 100 → 차감 45)', () => {
+  it('견적이 실제보다 낮았으면 차감하지 않는다 (견적 0, 실제 100 → 차감 없음)', () => {
     const r = computeReward(0, [100]);
-    expect(r.estimatePenalty).toBe(45);
-    expect(r.finalPay).toBe(55);
+    expect(r.predictionDiff).toBe(100); // 견적 비교(자기평가 기록)에는 차이가 그대로 남는다
+    expect(r.estimatePenalty).toBe(0);
+    expect(r.finalPay).toBe(100);
   });
 
   it('최종 공사 대금은 0보다 작아지지 않고, 모든 경우 0~100 정수', () => {

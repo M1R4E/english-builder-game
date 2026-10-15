@@ -233,7 +233,7 @@ export default function ResultWindow({ level, attempt, reward, attemptCount, onE
           </li>
         </ul>
         <p className="muted small" style={{ '--i': 3 }}>
-          견적과 첫 청구 금액의 차이가 {wonText(ESTIMATE_TOLERANCE)}을 넘으면, 넘은 금액의{' '}
+          견적이 첫 청구 금액보다 {wonText(ESTIMATE_TOLERANCE)} 넘게 높으면, 넘은 금액의{' '}
           {Math.round(ESTIMATE_PENALTY_RATE * 100)}%를 공사 대금에서 빼요(1,000원 미만은 빼지 않아요). 문장
           점수(청구 금액)와 별 개수에는 영향을 주지 않아요.
         </p>

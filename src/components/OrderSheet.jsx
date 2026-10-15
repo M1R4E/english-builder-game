@@ -175,7 +175,7 @@ export default function OrderSheet({ level, mode, prediction, onPredictionChange
                   className="slider"
                 />
                 <p className="receipt-note">
-                  * 이 공사를 마치고 받을 수 있을 것 같은 금액을 적어 보세요. 견적이 첫 청구 금액과 많이 다를수록
+                  * 이 공사를 마치고 받을 수 있을 것 같은 금액을 적어 보세요. 견적이 첫 청구 금액보다 많이 높을수록
                   최종 공사 대금이 줄어듭니다.
                 </p>
                 <p className="receipt-note receipt-cta">도장을 눌러 주문을 수락하면 공사가 시작됩니다. →</p>
