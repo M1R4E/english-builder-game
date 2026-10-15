@@ -17,8 +17,10 @@ const easeOutBack = (t) => {
 
 // 3D 화면 전체(장면, 카메라, 조명, 땅, 건물)를 관리하는 클래스.
 // 건물 모양 자체는 만들지 않고, 밖에서 만든 건물(Group)을 받아서 보여 준다.
+// options.interactive: false면 마우스·손가락으로 돌릴 수 없다 (메인 화면용)
+// options.autoRotate : true면 카메라가 건물 주위를 천천히 돈다
 export class BuildingRenderer {
-  constructor(container) {
+  constructor(container, { interactive = true, autoRotate = false } = {}) {
     this.container = container;
     this.lowPower = isLowPowerDevice();
     this.animations = []; // 등장 애니메이션 중인 부품 목록
@@ -42,6 +44,9 @@ export class BuildingRenderer {
     this.controls.maxPolarAngle = Math.PI * 0.47; // 땅 밑으로 내려가지 않게
     this.controls.minDistance = 5;
     this.controls.maxDistance = 40;
+    this.controls.enabled = interactive;
+    this.controls.autoRotate = autoRotate;
+    this.controls.autoRotateSpeed = 0.8;
 
     this.addLightsAndGround();
 

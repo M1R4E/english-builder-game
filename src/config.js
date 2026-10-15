@@ -12,9 +12,20 @@ export const SCORE_WEIGHTS = {
 export const CATEGORY_LABELS = {
   meaning: '의미 전달',
   grammar: '문법',
-  condition: '특별 조건',
+  condition: '특별 요청 사항',
   naturalness: '완성도·자연스러움',
 };
+
+// ── 돈 표시 ──
+// 게임 안에서는 "점수" 대신 "공사 대금(돈)"으로 보여 준다. 계산은 그대로 점수로 하고 화면에서만 바꾼다.
+// 1점 = 1,000원 → 만점 100점 = 100,000원
+export const WON_PER_POINT = 1000;
+
+// 레벨 시작 전 "예상 청구 비용"을 고를 때 한 칸의 크기 (점수 기준 5점 = 5,000원)
+export const PREDICTION_STEP = 5;
+
+// 결과 창에서 폭죽을 터뜨리는 기준 (이 점수 이상)
+export const FIREWORKS_THRESHOLD = 95;
 
 // 필수 성분(주어·동사·목적어·보어 중 그 레벨에서 꼭 필요한 것)이 빠졌을 때,
 // 빠진 성분 하나마다 감점하는 점수. 위 4개 항목과 별도로 총점에서 뺀다.
@@ -27,8 +38,8 @@ export const COMPLETE_THRESHOLD = 70;
 // 별 개수 기준 (최고 점수 기준): ★ 70, ★★ 85, ★★★ 95
 export const STAR_THRESHOLDS = [70, 85, 95];
 
-// 예상 점수와 첫 제출 점수의 차이에 따른 예측 배지
+// 예상 청구 비용과 첫 청구 금액의 차이(점수 기준)에 따른 견적 배지
 export const PREDICTION_BADGES = [
-  { maxDiff: 10, label: '정확한 예측' },
-  { maxDiff: 20, label: '거의 정확' },
+  { maxDiff: 10, label: '정확한 견적' },
+  { maxDiff: 20, label: '거의 정확한 견적' },
 ];

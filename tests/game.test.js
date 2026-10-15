@@ -36,7 +36,7 @@ describe('보상 계산', () => {
     expect(r.stars).toBe(2);
     expect(r.completed).toBe(true);
     expect(r.predictionDiff).toBe(20);
-    expect(r.predictionBadge).toBe('거의 정확');
+    expect(r.predictionBadge).toBe('거의 정확한 견적');
     expect(r.persistedBadge).toBe(true);
   });
 

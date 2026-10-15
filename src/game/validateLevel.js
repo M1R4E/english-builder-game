@@ -2,7 +2,7 @@ import { SCORE_WEIGHTS } from '../config.js';
 import { CHECK_TYPES } from './scoring.js';
 
 const ROLES = ['S', 'V', 'O', 'C', 'M', 'CONJ'];
-const REQUIRED_FIELDS = ['id', 'title', 'client', 'request', 'meaningKo', 'cards', 'structure', 'answers', 'checks', 'hints'];
+const REQUIRED_FIELDS = ['id', 'title', 'client', 'request', 'buildNote', 'meaning', 'cards', 'structure', 'answers', 'checks', 'hints'];
 
 // 레벨 데이터에 빠진 값이나 잘못된 값이 있는지 검사한다.
 // 문제가 있으면 문제 설명 목록을 돌려준다 (문제가 없으면 빈 배열).
@@ -14,6 +14,10 @@ export function validateLevel(level) {
     if (level[f] === undefined) problems.push(`필수 항목 없음: ${f}`);
   }
   if (problems.length) return problems;
+
+  if (typeof level.meaning.text !== 'string' || !Array.isArray(level.meaning.details)) {
+    problems.push('meaning에는 text(뜻)와 details(세부 사항 목록)가 있어야 함');
+  }
 
   // 카드
   const ids = new Set();

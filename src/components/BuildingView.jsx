@@ -5,7 +5,7 @@ import { BuildingRenderer } from '../building/BuildingRenderer.js';
 // 화면에 <div>를 하나 만들고, 그 안에 3D 렌더러를 붙인다.
 // 부품 목록(parts)이 바뀔 때마다 렌더러에 전달하고,
 // 화면에서 사라질 때는 렌더러를 정리(dispose)해서 메모리가 새지 않게 한다.
-export default function BuildingView({ parts, bounds, insetTop = 0, insetBottom = 0 }) {
+export default function BuildingView({ parts, bounds, insetTop = 0, insetBottom = 0, interactive = true, autoRotate = false }) {
   const containerRef = useRef(null);
   const rendererRef = useRef(null);
   const [error, setError] = useState(false);
@@ -13,7 +13,7 @@ export default function BuildingView({ parts, bounds, insetTop = 0, insetBottom 
   useEffect(() => {
     let renderer;
     try {
-      renderer = new BuildingRenderer(containerRef.current);
+      renderer = new BuildingRenderer(containerRef.current, { interactive, autoRotate });
     } catch (err) {
       console.error(err);
       setError(true);
@@ -24,6 +24,8 @@ export default function BuildingView({ parts, bounds, insetTop = 0, insetBottom 
       renderer.dispose();
       rendererRef.current = null;
     };
+    // 렌더러는 처음 한 번만 만든다 (interactive, autoRotate는 처음 값만 사용)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

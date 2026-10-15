@@ -169,10 +169,26 @@ function tree() {
   return group(trunk, leaves);
 }
 
+// 글자 표지판(스프라이트)을 떼어 낸다. 메인 화면처럼 글자 없이 건물만 보여 줄 때 쓴다.
+function withoutLabels(obj) {
+  const sprites = [];
+  obj.traverse((o) => {
+    if (o.isSprite) sprites.push(o);
+  });
+  for (const s of sprites) {
+    s.parent?.remove(s);
+    s.material.map?.dispose();
+    s.material.dispose();
+  }
+  return obj;
+}
+
 // ── 설계도 전체 → 부품 목록 ──
-export function buildParts(bp) {
+// options.labels: false면 "주어", "동사 ?" 같은 글자 표지판을 붙이지 않는다.
+export function buildParts(bp, { labels = true } = {}) {
   const parts = [];
-  const add = (key, sig, create) => parts.push({ key, sig: String(sig), create });
+  const add = (key, sig, create) =>
+    parts.push({ key, sig: String(sig), create: labels ? create : () => withoutLabels(create()) });
 
   add('foundation', 1, foundation);
   add('tree', 1, tree);

@@ -68,7 +68,7 @@ export default function PlayScreen({ level, onExit, onProgress }) {
       {/* 상단 바 */}
       <header className="hud-top" ref={topRef}>
         <button type="button" className="btn btn-ghost btn-small" onClick={onExit}>
-          ◀ 목록
+          ◀ 우편함
         </button>
         <div className="hud-title">
           <span className="hud-level">레벨 {level.id}</span>
@@ -174,6 +174,7 @@ export default function PlayScreen({ level, onExit, onProgress }) {
       {/* 창: 점검 보고서 (제출 결과) */}
       {state.phase === 'result' && !orderOpen && (
         <ResultWindow
+          key={state.attempts.length} // 제출할 때마다 연출을 처음부터 다시
           level={level}
           attempt={lastAttempt}
           reward={reward}

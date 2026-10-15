@@ -24,9 +24,18 @@ export default {
   difficulty: 1,
   topic: '주어 + 동사',
   client: '낮잠 좋아하는 고양이 씨',
-  request: '고양이 한 마리를 위한 1층짜리 작은 집을 지어 주세요. 집의 기초가 될 문장은 "고양이는 잠을 잔다"예요.',
-  meaningKo: '그 고양이(한 마리)는 잠을 잔다. — 평소에 늘 하는 일',
-  conditions: [{ id: 'present', text: '평소에 하는 일이므로 현재 시제로 쓰기', checkId: 'C1' }],
+
+  // ── 주문서에 들어가는 글 ──
+  //  request  : 공사 내용. 이야기(스토리)만 쓴다.
+  //  buildNote: 시공 안내. "문장으로 집을 짓는다" 같은 게임 설명은 여기에 따로 쓴다.
+  //  meaning  : 완성할 문장의 뜻. text가 가장 크게 보이고, details는 그 아래에 나열된다.
+  request: '햇볕 잘 드는 골목 끝에 사는 고양이 씨가 낮잠 잘 집을 주문했어요. 혼자 쓰기 좋은 작고 아늑한 1층 집이면 충분하대요.',
+  buildNote: '고양이 씨가 평소에 하는 일을 영어 문장 하나로 만들면, 그 문장이 1층 집의 기초와 기둥이 돼요.',
+  meaning: {
+    text: '그 고양이는 잠을 잔다.',
+    details: ['고양이는 한 마리예요.', '평소에 늘 하는 일이에요.'],
+  },
+  conditions: [{ id: 'present', text: '평소에 하는 일이므로 현재 시제로 써 주세요.', checkId: 'C1' }],
 
   // 비계(도움) 설정: 첫 레벨이라 카드에 문장 성분 이름을 보여 준다.
   scaffold: { showRoles: true },
@@ -79,7 +88,7 @@ export default {
     {
       id: 'C1', category: 'condition', points: 25, type: 'roleMatches', clause: 0, role: 'V',
       match: { tense: 'present' }, target: 'V', requires: ['V'],
-      pass: '현재 시제 조건을 지켰어요.',
+      pass: '현재 시제로 써 달라는 요청을 지켰어요.',
       fail: '평소에 늘 하는 일은 현재 시제로 나타내요. 동사의 시제를 확인해 보세요.',
     },
     {
