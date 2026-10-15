@@ -1,0 +1,152 @@
+/* ===== 색과 크기 기본값 (여기만 바꾸면 전체 분위기가 바뀐다) ===== */
+:root {
+  --bg: #f4efe6;
+  --surface: #fffdf8;
+  --text: #3a3330;
+  --muted: #8a7f78;
+  --line: #e6dccd;
+  --accent: #e58f65;
+  --hint: #f2c14e;
+  --submit: #4caf7a;
+  --radius: 14px;
+  --shadow: 0 2px 8px rgba(80, 60, 40, 0.08);
+  --gap: 16px;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; margin: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, 'Segoe UI', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+/* ===== 상단 바 ===== */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px var(--gap);
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+
+.logo { font-size: 1.25rem; margin: 0; }
+
+/* ===== 기본 레이아웃: PC는 좌우, 작은 화면은 위아래 ===== */
+.layout {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(320px, 2fr);
+  gap: var(--gap);
+  padding: var(--gap);
+  min-height: 0;
+}
+
+.stage {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+}
+
+.building-view {
+  flex: 1;
+  min-height: 300px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  background: #dcecf5;
+  touch-action: none; /* 3D 화면에서 드래그할 때 페이지가 같이 스크롤되지 않게 */
+}
+
+.building-view canvas { display: block; width: 100%; height: 100%; }
+
+.stage-caption { margin: 0; font-size: 0.85rem; color: var(--muted); text-align: center; }
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.card-box {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  box-shadow: var(--shadow);
+}
+
+.card-box h2 { font-size: 1rem; margin: 0 0 8px; }
+
+.muted { color: var(--muted); margin: 0; }
+
+/* ===== 카드 ===== */
+.card-tray { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.word-card {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 6px 14px;
+  border-radius: 10px;
+  background: #fff;
+  border: 2px solid var(--line);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.word-card.is-placeholder { opacity: 0.6; }
+
+.sentence-board {
+  min-height: 56px;
+  padding: 8px;
+  border: 2px dashed var(--line);
+  border-radius: 10px;
+}
+
+/* ===== 버튼: 힌트(노랑, 왼쪽)와 제출(초록, 오른쪽)을 색·아이콘·위치로 구분 ===== */
+.actions { display: flex; gap: 10px; }
+
+.btn {
+  min-height: 48px;
+  padding: 0 18px;
+  border-radius: 12px;
+  border: 2px solid transparent;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-ghost { background: var(--surface); border-color: var(--line); color: var(--text); }
+.btn-hint { background: var(--hint); color: #4a3a10; }
+.btn-submit { background: var(--submit); color: #fff; margin-left: auto; }
+
+/* ===== 태블릿: 3D 위, 패널 아래 ===== */
+@media (max-width: 1023px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .building-view { flex: none; height: 45vh; min-height: 260px; }
+}
+
+/* ===== 모바일 ===== */
+@media (max-width: 599px) {
+  :root { --gap: 10px; }
+  .logo { font-size: 1.1rem; }
+  .building-view { height: 38vh; min-height: 220px; }
+  .actions { flex-wrap: wrap; }
+  .actions .btn { flex: 1 1 auto; }
+}

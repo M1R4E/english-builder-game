@@ -1,0 +1,23 @@
+{
+  "name": "english-builder-game",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "영어 문장을 조립하면 3D 건물이 지어지는 학습 게임",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.2",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.4"
+  }
+}
