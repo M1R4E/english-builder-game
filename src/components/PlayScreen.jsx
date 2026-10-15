@@ -4,7 +4,7 @@ import { makeBlueprint } from '../building/makeBlueprint.js';
 import { COMPLETE_THRESHOLD } from '../config.js';
 import { computeReward } from '../game/reward.js';
 import { scoreSentence } from '../game/scoring.js';
-import { createSession, currentResult, sessionReducer } from '../game/session.js';
+import { createSession, currentResult, placedCount, sessionReducer } from '../game/session.js';
 import BuildingView from './BuildingView.jsx';
 import CardTray from './CardTray.jsx';
 import CompletionCelebration from './CompletionCelebration.jsx';
@@ -48,8 +48,8 @@ export default function PlayScreen({ level, onExit, onProgress }) {
 
   // 카드 상태 → 설계도 → 3D 부품 목록
   const { parts, bounds } = useMemo(
-    () => buildParts(makeBlueprint(level, state.selected, shownResult, { activeSlot })),
-    [level, state.selected, shownResult, activeSlot],
+    () => buildParts(makeBlueprint(level, state.placed, shownResult, { activeSlot })),
+    [level, state.placed, shownResult, activeSlot],
   );
 
   const selectSlot = useCallback((key) => dispatch({ type: 'SELECT_SLOT', key }), []);
@@ -58,7 +58,7 @@ export default function PlayScreen({ level, onExit, onProgress }) {
   const submit = () => {
     setHintOpen(false);
     // 이번 제출로 완공(70점 이상)이 되면 점검 보고서 전에 완공 연출을 먼저 보여 준다
-    if (scoreSentence(level, state.selected).total >= COMPLETE_THRESHOLD) {
+    if (scoreSentence(level, state.placed).total >= COMPLETE_THRESHOLD) {
       setCelebrating(true);
       setCelebrateKey(state.attempts.length + 1);
     }
@@ -123,7 +123,6 @@ export default function PlayScreen({ level, onExit, onProgress }) {
               level={level}
               slots={state.slots}
               placed={state.placed}
-              selected={state.selected}
               activeSlot={state.activeSlot}
               errorCardIds={shownResult?.errorCardIds ?? []}
               onSelect={selectSlot}
@@ -143,7 +142,7 @@ export default function PlayScreen({ level, onExit, onProgress }) {
               <button
                 type="button"
                 className="btn btn-ghost"
-                disabled={state.selected.length === 0}
+                disabled={placedCount(state) === 0}
                 onClick={() => dispatch({ type: 'CLEAR' })}
               >
                 비우기
@@ -151,7 +150,7 @@ export default function PlayScreen({ level, onExit, onProgress }) {
               <button
                 type="button"
                 className="btn btn-primary"
-                disabled={state.selected.length === 0}
+                disabled={placedCount(state) === 0}
                 onClick={submit}
               >
                 제출하기

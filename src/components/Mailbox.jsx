@@ -99,7 +99,6 @@ export default function Mailbox({ startOpen, progress, onOpened, onSelect, onBac
               );
             })}
           </ul>
-          <p className="muted small mailbox-note">레벨 2~10의 주문서는 3단계에서 도착할 예정이에요.</p>
         </section>
       )}
     </main>

@@ -34,6 +34,27 @@ export function IconPillar() {
   );
 }
 
+// 계단: 층과 층을 잇는 계단
+export function IconStairs() {
+  return (
+    <svg {...base}>
+      <path d="M4 20h5v-5h5v-5h6V4" />
+    </svg>
+  );
+}
+
+// 장식: 화분
+export function IconPlant() {
+  return (
+    <svg {...base}>
+      <path d="M7 14h10l-1.5 6h-7z" />
+      <path d="M12 14V8" />
+      <path d="M12 9c0-3 2-5 5-5 0 3-2 5-5 5z" />
+      <path d="M12 11c0-2-1.5-4-4-4 0 2 1.5 4 4 4z" />
+    </svg>
+  );
+}
+
 // 칸: 방 안의 상자
 export function IconRoom() {
   return (

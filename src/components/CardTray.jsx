@@ -1,4 +1,4 @@
-import { ROLE_LABELS } from '../game/analyzeSentence.js';
+import { ROLE_LABELS } from '../game/labels.js';
 import { cardsForSlot } from '../game/slots.js';
 
 // 자재(카드) 판. 지금 고른 자리에 놓을 수 있는 카드만 보여 준다.

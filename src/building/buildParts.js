@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ROLE_LABELS } from '../game/analyzeSentence.js';
+import { ROLE_LABELS } from '../game/labels.js';
 import { makeLabel } from './labels.js';
 import { MATERIALS } from './materials.js';
 
@@ -7,6 +7,8 @@ import { MATERIALS } from './materials.js';
 // 부품마다 key(이름표)와 sig(상태)를 붙인다.
 // 렌더러는 key가 같고 sig도 같은 부품은 그대로 두고, 새로 생기거나 바뀐 부품만 다시 만든다.
 // → 카드 하나를 바꿔도 건물 전체가 다시 튀어나오지 않고, 바뀐 부분만 애니메이션된다.
+// 주의: 부품의 위치나 모양을 바꾸는 값은 모두 key 또는 sig에 넣어야 한다.
+//       (빠뜨리면 이전 모양이 그대로 남는다. 예: 메인 화면 깃발이 떠 있던 문제)
 
 // 크기 규칙 (모든 레벨 공통)
 export const LAYOUT = {
@@ -47,10 +49,15 @@ const slotMaterial = (state, active, filledMaterial) =>
   active ? MATERIALS.active : state === 'ghost' ? MATERIALS.ghost : filledMaterial;
 
 // 누를 수 있는 자리 부품에 자리 key를 붙여 둔다 → 렌더러가 클릭된 부품의 자리를 알아낸다
-function asSlot(obj, f, role) {
-  obj.userData.slotKey = `${f}-${role}`;
+function asSlot(obj, key) {
+  if (key) obj.userData.slotKey = key;
   return obj;
 }
+
+// 장식(수식어) 화분의 위치: 방 앞쪽에 한 줄로
+const modX = (i, count) => (count <= 1 ? -0.4 : -1.2 + (i * 2.4) / Math.max(count - 1, 1));
+// 방 칸(목적어·보어)의 위치
+const roomX = (i, count) => (count === 1 ? 0 : -0.8 + i * 1.6);
 
 // ── 부품 만들기 ──
 
@@ -71,7 +78,7 @@ function pillars(f, role, state, active, word) {
   label.position.set(x, floorY(f) + H * 0.55, D / 2 + 0.55);
   // 고르는 중인 기둥은 조금 굵게 해서 눈에 띄게
   const t = active ? 0.45 : 0.35;
-  return asSlot(group(box(t, H, t, mat, x, y, -D / 2), box(t, H, t, mat, x, y, D / 2), label), f, role);
+  return asSlot(group(box(t, H, t, mat, x, y, -D / 2), box(t, H, t, mat, x, y, D / 2), label), `${f}-${role}`);
 }
 
 // 벽: 앞쪽은 열어 두는 "인형의 집" 방식 → 방 안의 칸과 가구가 보인다.
@@ -93,23 +100,35 @@ function walls(f) {
 }
 
 // 목적어·보어 칸: 방 안쪽 뒤편에 놓이는 상자
-function roomSlot(f, role, state, i, count, active, word) {
-  const x = count === 1 ? 0 : -0.8 + i * 1.6;
-  const mat = slotMaterial(state, active, MATERIALS[`room${role}`]);
-  const label = makeLabel(slotLabel(role, state, word), labelStyle(state, active), 0.8);
+function roomSlot(f, room, i, count, active, word) {
+  const x = roomX(i, count);
+  const mat = slotMaterial(room.state, active, MATERIALS[`room${room.role}`]);
+  const label = makeLabel(slotLabel(room.role, room.state, word), labelStyle(room.state, active), 0.8);
   label.position.set(x, floorY(f) + 1.35, -D / 2 + 0.6);
-  return asSlot(group(box(1.3, 0.9, 0.8, mat, x, floorY(f) + 0.45, -D / 2 + 0.6), label), f, role);
+  return asSlot(group(box(1.3, 0.9, 0.8, mat, x, floorY(f) + 0.45, -D / 2 + 0.6), label), room.key);
 }
 
-// 수식어: 방 안의 화분
-function furniture(f, i) {
-  const x = -1.1 + (i % 4) * 0.75;
+// 수식어 장식: 방 안의 화분. 자리(key)가 있으면 빈자리도 유령으로 보여 주고 누를 수 있다.
+function furniture(f, i, count, { key = null, state = 'filled', active = false, word, labels = false } = {}) {
+  const x = modX(i, count);
   const z = 0.45;
-  const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.14, 0.3, 6), MATERIALS.stairs);
+  const pot = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.18, 0.14, 0.3, 6),
+    slotMaterial(state, active, MATERIALS.stairs),
+  );
   pot.position.set(x, floorY(f) + 0.15, z);
-  const leaves = new THREE.Mesh(new THREE.IcosahedronGeometry(0.28, 0), MATERIALS.furniture);
+  const leaves = new THREE.Mesh(
+    new THREE.IcosahedronGeometry(active ? 0.34 : 0.28, 0),
+    slotMaterial(state, active, MATERIALS.furniture),
+  );
   leaves.position.set(x, floorY(f) + 0.5, z);
-  return group(pot, leaves);
+  const g = group(pot, leaves);
+  if (labels) {
+    const label = makeLabel(slotLabel('M', state, word), labelStyle(state, active), 0.75);
+    label.position.set(x, floorY(f) + 0.95, z + 0.4);
+    g.add(label);
+  }
+  return asSlot(g, key);
 }
 
 function roof(f, isTop) {
@@ -129,35 +148,50 @@ function roof(f, isTop) {
 }
 
 // 접속사 계단: 건물 오른쪽 바깥에서 아래층과 위층을 잇는다.
-function stairs(from, state) {
-  const mat = state === 'ghost' ? MATERIALS.ghost : MATERIALS.stairs;
+function stairs(st, labels) {
+  const active = Boolean(st.active);
+  const mat = slotMaterial(st.state, active, MATERIALS.stairs);
   const steps = 8;
   const rise = (H + SLAB) / steps;
   const run = D / steps;
   const x = W / 2 + 0.75;
   const g = new THREE.Group();
   for (let k = 0; k < steps; k += 1) {
-    g.add(box(0.9, 0.12, run + 0.02, mat, x, floorY(from) + (k + 1) * rise - 0.06, D / 2 - (k + 0.5) * run));
+    g.add(box(active ? 1.1 : 0.9, 0.12, run + 0.02, mat, x, floorY(st.from) + (k + 1) * rise - 0.06, D / 2 - (k + 0.5) * run));
   }
-  const label = makeLabel(state === 'ghost' ? '접속사 ?' : '접속사', state === 'ghost' ? 'ghost' : 'normal', 0.8);
-  label.position.set(x + 0.4, floorY(from) + (H + SLAB) / 2, 0);
-  g.add(label);
-  return g;
+  if (labels) {
+    const label = makeLabel(slotLabel('CONJ', st.state, st.word), labelStyle(st.state, active), 0.8);
+    label.position.set(x + 0.4, floorY(st.from) + (H + SLAB) / 2, 0);
+    g.add(label);
+  }
+  return asSlot(g, st.key);
 }
 
-function warning(f, role, floor, kind) {
-  const name = ROLE_LABELS[role] ?? '문장';
-  const text = kind === 'missing' ? `${name} 없음` : `! ${name} 확인`;
-  const label = makeLabel(text, 'warn', 1);
-  if (role === 'S' || role === 'V') {
-    label.position.set(role === 'S' ? -W / 2 : W / 2, floorY(f) + H + 0.35, D / 2 + 0.55);
-  } else if (role === 'O' || role === 'C') {
-    const i = floor.rooms.findIndex((r) => r.role === role);
-    const x = floor.rooms.length === 1 ? 0 : -0.8 + Math.max(i, 0) * 1.6;
-    label.position.set(x, floorY(f) + 1.9, -D / 2 + 0.6);
-  } else {
-    label.position.set(0, floorY(f) + H + 0.35, D / 2 + 0.55);
+// 경고 표지판 위치: 가리키는 자리 부품 바로 위
+function warningPosition(slot, bp) {
+  if (slot.startsWith('L')) {
+    const st = bp.stairs.find((s) => s.key === slot);
+    return [W / 2 + 1.1, floorY(st?.from ?? 0) + H + 0.2, 0];
   }
+  const f = Number(slot.split('-')[0]);
+  const floor = bp.floors[f];
+  const role = slot.split('-')[1];
+  if (role === 'S' || role === 'V') return [role === 'S' ? -W / 2 : W / 2, floorY(f) + H + 0.35, D / 2 + 0.55];
+  if (role === 'O' || role === 'C') {
+    const i = Math.max(floor.rooms.findIndex((r) => r.key === slot), 0);
+    return [roomX(i, floor.rooms.length), floorY(f) + 1.9, -D / 2 + 0.6];
+  }
+  const mods = floor.mods ?? [];
+  const i = Math.max(mods.findIndex((m) => m.key === slot), 0);
+  return [modX(i, mods.length), floorY(f) + 1.45, 0.85];
+}
+
+function warning(w, bp) {
+  const role = w.slot.startsWith('L') ? 'CONJ' : w.slot.split('-')[1];
+  const name = ROLE_LABELS[role] ?? '문장';
+  const text = w.kind === 'missing' ? `${name} 없음` : `! ${name} 확인`;
+  const label = makeLabel(text, 'warn', 1);
+  label.position.set(...warningPosition(w.slot, bp));
   return label;
 }
 
@@ -217,27 +251,37 @@ export function buildParts(bp, { labels = true } = {}) {
     if (f > 0) add(`f${f}-slab`, fl.hasCards ? 'filled' : 'ghost', () => slab(f, fl.hasCards ? 'filled' : 'ghost'));
     const words = fl.words ?? {};
     for (const role of ['S', 'V']) {
+      const key = `${f}-${role}`;
       const state = fl.pillars[role];
-      const active = fl.active === role;
-      add(`f${f}-${role}`, `${state}-${active}-${words[role] ?? ''}`, () => pillars(f, role, state, active, words[role]));
+      const active = fl.active === key;
+      add(`f${f}-${role}`, `${state}-${active}-${words[key] ?? ''}`, () => pillars(f, role, state, active, words[key]));
     }
     fl.rooms.forEach((room, i) => {
-      const active = fl.active === room.role;
-      add(`f${f}-room-${room.role}`, `${room.state}-${i}-${fl.rooms.length}-${active}-${words[room.role] ?? ''}`, () =>
-        roomSlot(f, room.role, room.state, i, fl.rooms.length, active, words[room.role]));
+      const active = Boolean(room.key) && fl.active === room.key;
+      add(`f${f}-room-${room.role}`, `${room.state}-${i}-${fl.rooms.length}-${active}-${words[room.key] ?? ''}`, () =>
+        roomSlot(f, room, i, fl.rooms.length, active, words[room.key]));
     });
     if (fl.coreComplete) add(`f${f}-walls`, 1, () => walls(f));
-    for (let i = 0; i < fl.modifiers; i += 1) add(`f${f}-furn-${i}`, 1, () => furniture(f, i));
+    // 장식: 게임에서는 자리(mods)마다, 메인 화면 견본에서는 개수(modifiers)만큼
+    const mods = fl.mods ?? Array.from({ length: fl.modifiers ?? 0 }, () => ({ key: null, state: 'filled' }));
+    mods.forEach((m, i) => {
+      const active = Boolean(m.key) && fl.active === m.key;
+      const word = words[m.key];
+      add(`f${f}-furn-${i}`, `${m.state}-${i}-${mods.length}-${active}-${word ?? ''}`, () =>
+        furniture(f, i, mods.length, { key: m.key, state: m.state, active, word, labels: Boolean(m.key) }));
+    });
     if (fl.roomComplete) add(`f${f}-roof`, fl.isTop ? 'top' : 'eave', () => roof(f, fl.isTop));
   }
 
-  for (const st of bp.stairs) add(`stairs-${st.from}`, st.state, () => stairs(st.from, st.state));
+  for (const st of bp.stairs) {
+    add(`stairs-${st.from}`, `${st.state}-${Boolean(st.active)}-${st.word ?? ''}`, () => stairs(st, Boolean(st.key)));
+  }
 
   for (const w of bp.warnings) {
-    const floor = bp.floors[w.floor];
-    // 목적어·보어 경고는 방 칸 배치에 따라 위치가 달라지므로 칸 목록도 sig에 넣는다
-    const rooms = floor.rooms.map((r) => r.role).join('');
-    add(`warn-${w.floor}-${w.role}`, `${w.kind}-${rooms}`, () => warning(w.floor, w.role, floor, w.kind));
+    // 경고 위치는 방 칸·장식 배치에 따라 달라지므로 그 배치도 sig에 넣는다
+    const f = w.slot.startsWith('L') ? null : Number(w.slot.split('-')[0]);
+    const layout = f === null ? '' : `${bp.floors[f].rooms.map((r) => r.key).join()}|${(bp.floors[f].mods ?? []).length}`;
+    add(`warn-${w.slot}`, `${w.kind}-${layout}`, () => warning(w, bp));
   }
 
   const n = bp.floors.length;

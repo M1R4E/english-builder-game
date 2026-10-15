@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { PREDICTION_STEP, WON_PER_POINT } from '../config.js';
 import { formatWon, MAX_WON, toWon } from '../game/money.js';
-import { IconFloor, IconPillar, IconRoom } from './Icons.jsx';
+import { getSlots } from '../game/slots.js';
+import { IconFloor, IconPillar, IconPlant, IconRoom, IconStairs } from './Icons.jsx';
 import Window from './Window.jsx';
 
 const STAMP_MS = 900; // 도장 찍는 연출 시간
@@ -17,21 +18,27 @@ const ITEM_OF_ROLE = {
   V: { name: '동사 기둥', Icon: IconPillar },
   O: { name: '목적어 칸', Icon: IconRoom },
   C: { name: '보어 칸', Icon: IconRoom },
+  CONJ: { name: '접속사 계단', Icon: IconStairs },
+  M: { name: '장식 (수식어)', Icon: IconPlant },
 };
 
-// 필요한 성분 수를 세어 품목 목록을 만든다. 예: 층 1, 주어 기둥 1, 동사 기둥 1
+// 필요한 자리 수를 세어 품목 목록을 만든다. 예: 층 1, 주어 기둥 1, 동사 기둥 1
 function itemsOf(level) {
-  const clauses = level.structure.clauses;
   const counts = {};
-  for (const clause of clauses) {
-    for (const role of clause.slots) counts[role] = (counts[role] ?? 0) + 1;
-  }
+  for (const slot of getSlots(level)) counts[slot.role] = (counts[slot.role] ?? 0) + 1;
   return [
-    { key: 'floor', name: '층 (절)', Icon: IconFloor, count: clauses.length },
-    ...['S', 'V', 'O', 'C']
+    { key: 'floor', name: '층 (절)', Icon: IconFloor, count: level.structure.clauses.length },
+    ...['S', 'V', 'O', 'C', 'CONJ', 'M']
       .filter((role) => counts[role])
       .map((role) => ({ key: role, ...ITEM_OF_ROLE[role], count: counts[role] })),
   ];
+}
+
+// 특별 요청 사항의 상태: 연결된 채점 항목이 모두 통과하면 '충족'
+function conditionStatus(cond, result) {
+  if (!result) return null;
+  const statuses = (cond.checkIds ?? [cond.checkId]).map((id) => result.checks.find((c) => c.id === id)?.status);
+  return statuses.every((s) => s === 'pass') ? 'pass' : 'fail';
 }
 
 // 건축 주문서 (영수증·견적서 모양 종이).
@@ -129,7 +136,7 @@ export default function OrderSheet({ level, mode, prediction, onPredictionChange
               <h3>특별 요청 사항</h3>
               <ul className="receipt-conditions">
                 {level.conditions.map((cond) => {
-                  const status = result?.checks.find((c) => c.id === cond.checkId)?.status;
+                  const status = conditionStatus(cond, result);
                   return (
                     <li key={cond.id}>
                       <span className="receipt-box" aria-hidden="true">

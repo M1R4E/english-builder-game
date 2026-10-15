@@ -1,91 +1,74 @@
 import { COMPLETE_THRESHOLD } from '../config.js';
-import { analyzeSentence, getCards } from '../game/analyzeSentence.js';
+import { analyzePlaced } from '../game/analyzeSentence.js';
+import { getSlots } from '../game/slots.js';
 
-// ── 카드 → 건물 설계도 ──
+// ── 자리 배치 → 건물 설계도 ──
 // 3D 코드와 분리된 순수 계산이다. "어떤 부품이 어떤 상태인지"만 정한다.
 //
 // 문법 ↔ 건축 대응
 //  절(clause)          → 층(floor) = 방 하나
 //  주어(S) / 동사(V)    → 왼쪽 기둥 / 오른쪽 기둥
 //  목적어(O) / 보어(C)  → 방 안쪽의 칸
-//  수식어(M)            → 실내 장식(가구)
+//  수식어(M)            → 실내 장식(화분)
 //  접속사(CONJ)         → 층과 층을 잇는 계단
 //  방 완성(필수 자리가 모두 채워짐) → 그 층의 지붕 (정답 여부와 관계없음)
-//  제출 결과 정답        → 울타리와 깃발
+//  제출 결과: 특별 요청 사항 충족 → 울타리, 완공 → 깃발
 //
 // 자리 상태: 'filled' 카드가 놓임 / 'ghost' 비어 있음(반투명으로 위치만 표시)
-// options.activeSlot: 지금 카드를 고르고 있는 자리 key (예: '0-S'). 그 부품을 강조한다.
+// 모든 자리 부품에는 자리 key가 붙어 있어, 3D 화면에서 눌러 고를 수 있다.
+// options.activeSlot: 지금 카드를 고르고 있는 자리 key. 그 부품을 강조한다.
 
-export function makeBlueprint(level, ids, result = null, { activeSlot = null } = {}) {
-  const analysis = analyzeSentence(getCards(level, ids));
-  const required = level.structure.clauses;
-  const floorCount = Math.max(required.length, analysis.clauses.length);
+export function makeBlueprint(level, placed, result = null, { activeSlot = null } = {}) {
+  const slots = getSlots(level);
+  const analysis = analyzePlaced(level, placed);
+  const state = (key) => (analysis.bySlot[key] ? 'filled' : 'ghost');
+  const word = (key) => analysis.bySlot[key]?.text;
 
-  const floors = [];
-  for (let i = 0; i < floorCount; i += 1) {
-    const clause = analysis.clauses[i] || { cards: [], roles: {} };
-    const slots = required[i]?.slots ?? ['S', 'V'];
-    const has = (role) => (clause.roles[role]?.length ?? 0) > 0;
-
-    // 필요한 자리 + (필요 없지만) 플레이어가 넣은 목적어·보어 자리
-    const roomRoles = ['O', 'C'].filter((r) => slots.includes(r) || has(r));
-
-    // 각 자리에 놓인 단어 (3D 표지판에 "주어 · the cat"처럼 보여 준다)
+  const floors = level.structure.clauses.map((_, i) => {
+    const mine = slots.filter((s) => s.clause === i);
     const words = {};
-    for (const role of ['S', 'V', 'O', 'C']) {
-      if (has(role)) words[role] = clause.roles[role][0].text;
-    }
-    const [activeFloor, activeRole] = activeSlot ? activeSlot.split('-') : [];
-
-    floors.push({
+    for (const s of mine) if (word(s.key)) words[s.key] = word(s.key);
+    return {
       index: i,
-      hasCards: clause.cards.length > 0,
-      pillars: {
-        S: has('S') ? 'filled' : 'ghost',
-        V: has('V') ? 'filled' : 'ghost',
-      },
-      rooms: roomRoles.map((role) => ({ role, state: has(role) ? 'filled' : 'ghost' })),
+      hasCards: mine.some((s) => analysis.bySlot[s.key]),
+      pillars: { S: state(`${i}-S`), V: state(`${i}-V`) },
+      rooms: mine.filter((s) => s.role === 'O' || s.role === 'C').map((s) => ({ role: s.role, key: s.key, state: state(s.key) })),
+      mods: mine.filter((s) => s.kind === 'mod').map((s) => ({ key: s.key, state: state(s.key) })),
       words,
-      active: Number(activeFloor) === i ? activeRole : null, // 이 층에서 고르고 있는 자리의 성분
-      modifiers: clause.roles.M?.length ?? 0,
-      coreComplete: has('S') && has('V'),
-      roomComplete: slots.every(has),
-      isTop: i === floorCount - 1,
+      active: mine.some((s) => s.key === activeSlot) ? activeSlot : null,
+      coreComplete: Boolean(analysis.bySlot[`${i}-S`] && analysis.bySlot[`${i}-V`]),
+      roomComplete: mine.filter((s) => s.required).every((s) => analysis.bySlot[s.key]),
+      isTop: i === level.structure.clauses.length - 1,
+    };
+  });
+
+  // 층 사이 계단(접속사). 문장 맨 앞 접속사(before: 0)도 1층과 2층을 잇는다.
+  const stairs = slots
+    .filter((s) => s.kind === 'link')
+    .map((s) => {
+      const from = s.link.after ?? s.link.before;
+      return { from, to: from + 1, key: s.key, state: state(s.key), word: word(s.key), active: s.key === activeSlot };
     });
-  }
 
-  // 층 사이 연결(계단): 접속사가 있으면 'filled', 층이 여러 개인데 접속사가 없으면 'ghost'
-  const stairs = [];
-  const leading = analysis.clauses[0]?.leadingConnector;
-  for (let i = 0; i < floorCount - 1; i += 1) {
-    const linked = analysis.connectors.some((c) => c.between[0] === i) || (i === 0 && Boolean(leading));
-    stairs.push({ from: i, to: i + 1, state: linked ? 'filled' : 'ghost' });
-  }
-
-  // 제출 결과의 실패 항목 → 건물 위 경고 표시
+  // 제출 결과 → 건물 위 경고 표시 (빈 필수 자리, 실패한 항목이 가리키는 자리)
   const warnings = [];
   if (result) {
-    // 빠진 필수 성분 → 그 자리에 경고
-    for (const m of result.missing ?? []) {
-      warnings.push({ floor: Math.min(m.clause, floorCount - 1), role: m.role, kind: 'missing' });
-    }
+    for (const m of result.missing ?? []) warnings.push({ slot: m.slot, kind: 'missing' });
     for (const check of result.checks) {
       if (check.status !== 'fail' || !check.target) continue;
-      const floor = Math.min(check.clause, floorCount - 1);
-      if (!warnings.some((w) => w.floor === floor && w.role === check.target)) {
-        warnings.push({ floor, role: check.target, kind: 'check' });
-      }
+      if (!warnings.some((w) => w.slot === check.target)) warnings.push({ slot: check.target, kind: 'check' });
     }
   }
 
-  const conditionChecks = result?.checks.filter((c) => c.category === 'condition') ?? [];
+  const conditionIds = new Set((level.conditions ?? []).flatMap((c) => c.checkIds ?? [c.checkId]));
+  const conditionChecks = result?.checks.filter((c) => conditionIds.has(c.id) || c.category === 'condition') ?? [];
 
   return {
     floors,
     stairs,
     warnings,
     submitted: Boolean(result),
-    // 특별 조건을 모두 지켰으면 울타리, 완공 점수 이상이면 깃발
+    // 특별 요청 사항을 모두 지켰으면 울타리, 완공 점수 이상이면 깃발
     conditionsMet: conditionChecks.length > 0 && conditionChecks.every((c) => c.status === 'pass'),
     completed: Boolean(result && result.total >= COMPLETE_THRESHOLD),
     success: Boolean(result?.perfect),

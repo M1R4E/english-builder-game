@@ -1,62 +1,67 @@
-// 플레이어가 고른 카드들을 분석해서 "절(층)"로 나누고 성분별로 정리한다.
+// 자리에 놓인 카드를 분석해서 "절(층)"별로 정리하고, 화면에 보여 줄 문장을 만든다.
 // React나 Three.js와 관계없는 순수 함수라서 자동 테스트하기 쉽다.
+//
+// placed: 자리 key → 카드 id  (예: { '0-S': 'the-cat', '0-V': 'sleeps' })
 
-export const CORE_ROLES = ['S', 'V', 'O', 'C']; // 한 절에 하나씩만 있어야 하는 성분
+import { CORE_ROLES, ROLE_LABELS } from './labels.js';
+import { getSlots } from './slots.js';
 
-export const ROLE_LABELS = {
-  S: '주어',
-  V: '동사',
-  O: '목적어',
-  C: '보어',
-  M: '수식어',
-  CONJ: '접속사',
-};
+export { CORE_ROLES, ROLE_LABELS };
 
-// 카드 id 목록 → 카드 객체 목록 (없는 id는 건너뛴다)
-export function getCards(level, ids) {
-  const byId = new Map(level.cards.map((c) => [c.id, c]));
-  return ids.map((id) => byId.get(id)).filter(Boolean);
+const cardMap = (level) => new Map(level.cards.map((c) => [c.id, c]));
+
+// 자리 순서대로 놓인 카드 목록 [{ slot, card }]
+export function placedCards(level, placed) {
+  const byId = cardMap(level);
+  return getSlots(level)
+    .map((slot) => ({ slot, card: byId.get(placed[slot.key]) }))
+    .filter((x) => x.card);
 }
 
-// 카드 목록 → { clauses: [{ cards, roles }], connectors: [...] }
-// 접속사(CONJ)를 만나면 새 절(층)이 시작된다.
-// 단, 문장 맨 앞의 접속사(예: When ...)는 새 절을 만들지 않고 바로 뒤 절에 붙는다.
-export function analyzeSentence(cards) {
-  const clauses = [{ cards: [], leadingConnector: null }];
-  const connectors = [];
-
-  for (const card of cards) {
-    const current = clauses[clauses.length - 1];
-    if (card.role === 'CONJ') {
-      if (current.cards.length === 0 && !current.leadingConnector) {
-        current.leadingConnector = card;
-      } else {
-        connectors.push({ card, between: [clauses.length - 1, clauses.length] });
-        clauses.push({ cards: [], leadingConnector: null });
-      }
-    } else {
-      current.cards.push(card);
+// placed → { clauses: [{ cards, roles, bySlot }], links: { [id]: card }, bySlot }
+//  roles  : 성분별 카드 목록 (예: roles.S = [주어 카드])
+//  bySlot : 자리 key별 카드
+export function analyzePlaced(level, placed) {
+  const clauses = level.structure.clauses.map(() => ({ cards: [], roles: {}, bySlot: {} }));
+  const links = {};
+  const bySlot = {};
+  for (const { slot, card } of placedCards(level, placed)) {
+    bySlot[slot.key] = card;
+    if (slot.kind === 'link') {
+      links[slot.key] = card;
+      continue;
     }
+    const clause = clauses[slot.clause];
+    clause.cards.push(card);
+    clause.bySlot[slot.key] = card;
+    (clause.roles[card.role] ||= []).push(card);
   }
-
-  for (const clause of clauses) {
-    clause.roles = {};
-    for (const card of clause.cards) {
-      (clause.roles[card.role] ||= []).push(card);
-    }
-  }
-
-  return { clauses, connectors };
+  return { clauses, links, bySlot };
 }
 
-// 카드 목록 → 화면에 보여 줄 문장 (첫 글자 대문자, 끝에 마침표)
-export function sentenceText(cards) {
-  if (cards.length === 0) return '';
-  let text = '';
-  for (const card of cards) {
-    const t = card.text;
-    text += text === '' || t.startsWith(',') ? t : ` ${t}`;
-  }
+// placed → 화면에 보여 줄 문장 (첫 글자 대문자, 끝에 마침표, 레벨 구조에 따른 쉼표)
+export function sentenceText(level, placed) {
+  const byId = cardMap(level);
+  const { clauses } = level.structure;
+  const slots = getSlots(level);
+  const tokens = [];
+  slots.forEach((slot, i) => {
+    const card = byId.get(placed[slot.key]);
+    if (card) {
+      if (slot.kind === 'link' && slot.link.commaBefore && tokens.length > 0) tokens.push(',');
+      tokens.push(card.text);
+    }
+    // 절이 끝나는 곳: commaAfter가 있으면 쉼표 (그 절에 카드가 하나라도 있을 때)
+    const next = slots[i + 1];
+    const clauseEnds = slot.clause !== null && (!next || next.clause !== slot.clause);
+    if (clauseEnds && clauses[slot.clause].commaAfter) {
+      const hasCard = slots.some((s) => s.clause === slot.clause && placed[s.key]);
+      if (hasCard && tokens[tokens.length - 1] !== ',') tokens.push(',');
+    }
+  });
+  while (tokens[tokens.length - 1] === ',') tokens.pop();
+  if (tokens.length === 0) return '';
+  let text = tokens.reduce((acc, t) => (acc === '' ? t : t === ',' ? `${acc},` : `${acc} ${t}`), '');
   text = text.charAt(0).toUpperCase() + text.slice(1);
   return /[.!?]$/.test(text) ? text : `${text}.`;
 }

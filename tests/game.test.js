@@ -1,30 +1,36 @@
 import { describe, expect, it } from 'vitest';
 import level from '../src/data/levels/level01.js';
-import { analyzeSentence, sentenceText } from '../src/game/analyzeSentence.js';
+import level4 from '../src/data/levels/level04.js';
+import level5 from '../src/data/levels/level05.js';
+import { analyzePlaced, sentenceText } from '../src/game/analyzeSentence.js';
 import { computeReward, estimatePenalty } from '../src/game/reward.js';
 import { createSession, currentResult, sessionReducer } from '../src/game/session.js';
+import { getSlots } from '../src/game/slots.js';
 import { validateLevel } from '../src/game/validateLevel.js';
 
-const card = (text, role) => ({ id: text, text, role });
+describe('자리와 문장 분석', () => {
+  it('자리 순서: 문장 맨 앞 계단 → 1층 → 2층', () => {
+    expect(getSlots(level5).map((s) => s.key)).toEqual(['L0', '0-S', '0-V', '1-S', '1-V', '1-M-where']);
+    expect(getSlots(level4).map((s) => s.key)).toEqual(['0-S', '0-V', '0-C', 'L0', '1-S', '1-V', '1-O']);
+  });
 
-describe('문장 분석', () => {
-  it('접속사로 절(층)을 나눈다', () => {
-    const a = analyzeSentence([card('I', 'S'), card('was tired', 'V'), card(', but', 'CONJ'), card('I', 'S'), card('slept', 'V')]);
+  it('카드를 층별로 나누고, 계단의 접속사는 따로 모은다', () => {
+    const a = analyzePlaced(level4, level4.answers.accepted[0]);
     expect(a.clauses).toHaveLength(2);
-    expect(a.connectors).toHaveLength(1);
+    expect(a.clauses[1].roles.S[0].text).toBe('he');
+    expect(a.links.L0.text).toBe('but');
   });
 
-  it('문장 맨 앞의 접속사는 새 층을 만들지 않는다', () => {
-    const a = analyzeSentence([card('when', 'CONJ'), card('it', 'S'), card('rained', 'V')]);
-    expect(a.clauses).toHaveLength(1);
-    expect(a.clauses[0].leadingConnector.text).toBe('when');
+  it('첫 글자를 대문자로, 끝에 마침표, 레벨 구조에 맞춰 쉼표를 붙인다', () => {
+    expect(sentenceText(level, { '0-S': 'the-cat', '0-V': 'sleeps' })).toBe('The cat sleeps.');
+    expect(sentenceText(level4, level4.answers.accepted[0])).toBe('The carpenter was tired, but he finished the work.');
+    expect(sentenceText(level5, level5.answers.accepted[1])).toBe('After the rain stopped, the children played outside.');
+    expect(sentenceText(level, {})).toBe('');
   });
 
-  it('첫 글자를 대문자로, 끝에 마침표를 붙인다', () => {
-    expect(sentenceText([card('the cat', 'S'), card('sleeps', 'V')])).toBe('The cat sleeps.');
-    expect(sentenceText([card('I', 'S'), card('ran', 'V'), card(', so', 'CONJ'), card('I', 'S'), card('won', 'V')]))
-      .toBe('I ran, so I won.');
-    expect(sentenceText([])).toBe('');
+  it('빈자리가 있으면 그 자리를 건너뛰고, 쉼표가 겹치거나 끝에 남지 않는다', () => {
+    expect(sentenceText(level4, { '0-S': 'the-carpenter', L0: 'but' })).toBe('The carpenter, but.');
+    expect(sentenceText(level5, { L0: 'when', '0-S': 'the-rain' })).toBe('When the rain.');
   });
 });
 
@@ -104,7 +110,7 @@ describe('플레이 진행 상태 (자리를 골라 카드 놓기)', () => {
     expect(s.placed).toEqual({ '0-S': 'the-cat' });
     expect(s.activeSlot).toBe('0-V');
     s = place(s, 'sleeps');
-    expect(s.selected).toEqual(['the-cat', 'sleeps']); // 자리 순서 = 문장 순서
+    expect(s.placed).toEqual({ '0-S': 'the-cat', '0-V': 'sleeps' });
     expect(s.activeSlot).toBeNull(); // 모든 자리가 찼다
   });
 
@@ -120,18 +126,18 @@ describe('플레이 진행 상태 (자리를 골라 카드 놓기)', () => {
     s = place(s, 'sleep');
     s = sessionReducer(s, { type: 'SELECT_SLOT', key: '0-V' });
     s = place(s, 'sleeps'); // 바꾸기
-    expect(s.selected).toEqual(['the-cat', 'sleeps']);
+    expect(s.placed).toEqual({ '0-S': 'the-cat', '0-V': 'sleeps' });
     s = sessionReducer(s, { type: 'SELECT_SLOT', key: '0-S' });
     s = place(s, 'the-cat'); // 같은 카드 → 빼기
-    expect(s.selected).toEqual(['sleeps']);
+    expect(s.placed).toEqual({ '0-V': 'sleeps' });
     expect(s.activeSlot).toBe('0-S');
     s = sessionReducer(s, { type: 'UNDO' });
-    expect(s.selected).toEqual(['the-cat', 'sleeps']);
+    expect(s.placed).toEqual({ '0-S': 'the-cat', '0-V': 'sleeps' });
     s = sessionReducer(s, { type: 'CLEAR_SLOT', key: '0-V' });
     expect(s.placed).toEqual({ '0-S': 'the-cat' });
     expect(s.activeSlot).toBe('0-V');
     s = sessionReducer(s, { type: 'CLEAR' });
-    expect(s.selected).toEqual([]);
+    expect(s.placed).toEqual({});
   });
 
   it('없는 자리는 고를 수 없고, 조립 단계가 아니면 바뀌지 않는다', () => {
@@ -168,7 +174,11 @@ describe('레벨 데이터 검사기', () => {
   it('빠진 항목이나 잘못된 배점을 찾아낸다', () => {
     expect(validateLevel(null)).not.toEqual([]);
     expect(validateLevel({ ...level, checks: level.checks.slice(1) }).join()).toMatch(/grammar 배점 합계/);
-    expect(validateLevel({ ...level, answers: { accepted: [['없는카드']] } }).join()).toMatch(/없는 카드 id/);
+    expect(validateLevel({ ...level, answers: { accepted: [{ '0-S': '없는카드', '0-V': 'sleeps' }] } }).join()).toMatch(/없는 카드 id/);
+    expect(validateLevel({ ...level, answers: { accepted: [{ '0-S': 'sleeps', '0-V': 'sleeps' }] } }).join()).toMatch(/놓을 수 없음/);
+    expect(validateLevel({ ...level, answers: { accepted: [{ '0-S': 'the-cat' }] } }).join()).toMatch(/필수 자리 0-V/);
+    const twoFloorsNoStairs = { ...level, structure: { clauses: [{ slots: ['S', 'V'] }, { slots: ['S', 'V'] }] } };
+    expect(validateLevel(twoFloorsNoStairs).join()).toMatch(/계단/);
     const noGrammar = level.conditions.map(({ grammar, ...rest }) => rest);
     expect(validateLevel({ ...level, conditions: noGrammar }).join()).toMatch(/문장에서의 뜻/);
   });

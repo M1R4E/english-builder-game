@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CATEGORY_LABELS, ESTIMATE_PENALTY_RATE, ESTIMATE_TOLERANCE, FIREWORKS_THRESHOLD } from '../config.js';
-import { getCards, sentenceText } from '../game/analyzeSentence.js';
+import { sentenceText } from '../game/analyzeSentence.js';
 import { formatWon, MAX_WON, toWon, wonText } from '../game/money.js';
 import Fireworks from './Fireworks.jsx';
 import Window from './Window.jsx';
@@ -55,7 +55,7 @@ function useCountUp(target, active, duration) {
 // X 또는 확인 버튼으로 닫으면 문장 고치기로 돌아간다. "바로 보기"를 누르면 연출을 건너뛴다.
 export default function ResultWindow({ level, attempt, reward, attemptCount, onEdit, onExit }) {
   const { result } = attempt;
-  const sentence = sentenceText(getCards(level, attempt.ids));
+  const sentence = sentenceText(level, attempt.placed);
 
   // 고칠 점을 먼저, 그다음 통과 항목을 보여 준다.
   const order = { fail: 0, partial: 1, skipped: 2, blocked: 3, pass: 4 };

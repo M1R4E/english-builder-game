@@ -10,7 +10,7 @@ import './styles/app.css';
 
 // 3D 표지판은 캔버스에 글자를 그려서 만들기 때문에, 그리기 전에 글꼴이 준비되어 있어야 한다.
 // 표지판에 쓰는 글자를 미리 불러오고, 늦어지면(최대 1.5초) 기다리지 않고 시작한다.
-const LABEL_CHARS = '주어동사목적어보어수식어접속사확인없음고르는중? !·abcdefghijklmnopqrstuvwxyz';
+const LABEL_CHARS = '주어동사목적어보어수식어접속사확인없음고르는중? !·,abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
 const fontsReady = document.fonts
   ? document.fonts.load('44px "Jua"', LABEL_CHARS).catch(() => {})
   : Promise.resolve();

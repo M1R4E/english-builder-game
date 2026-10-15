@@ -398,7 +398,7 @@ body {
 /* 고르고 있는 자리: 3D의 노란 기둥과 같은 색 + "고르는 중" 글자 */
 .slot-chip.is-active { border: 3px solid #f0b400; background: #fff3c4; box-shadow: 0 0 0 3px rgba(240, 180, 0, 0.25); }
 .slot-chip.has-error { background: #fff1d6; }
-.slot-name { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--muted); }
+.slot-name { display: flex; align-items: center; flex-wrap: wrap; gap: 2px 6px; font-size: 0.8rem; color: var(--muted); word-break: keep-all; }
 .slot-now { padding: 0 6px; border-radius: 999px; background: #f0b400; color: #fff; font-size: 0.7rem; }
 .slot-word { font-size: 1.15rem; }
 .slot-chip:not(.is-filled) .slot-word { color: #6f9fd8; }
@@ -845,7 +845,9 @@ body {
   .dock-actions .btn-primary { grid-column: 1 / -1; order: -1; }
   .dock-actions .btn { padding: 0 8px; }
   .word-card { font-size: 1rem; padding: 6px 12px; }
-  .slot-chip { flex: 1; min-width: 0; }
+  /* 자리가 많아도 카드 판이 커지지 않도록, 공정표를 가로로 밀어서 보게 한다 */
+  .slot-board { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; scroll-padding: 0 12px; }
+  .slot-chip { flex: 0 0 auto; min-width: 104px; max-width: 150px; min-height: 52px; padding: 5px 10px; }
 }
 
 @media (max-width: 480px) {
