@@ -16,6 +16,11 @@ export const CATEGORY_LABELS = {
   naturalness: '완성도·자연스러움',
 };
 
+// 필수 성분(주어·동사·목적어·보어 중 그 레벨에서 꼭 필요한 것)이 빠졌을 때,
+// 빠진 성분 하나마다 감점하는 점수. 위 4개 항목과 별도로 총점에서 뺀다.
+// 40점 → 하나만 빠져도 최대 60점이라 완공(70점)할 수 없다.
+export const MISSING_ROLE_PENALTY = 40;
+
 // 이 점수 이상이면 "완공"
 export const COMPLETE_THRESHOLD = 70;
 

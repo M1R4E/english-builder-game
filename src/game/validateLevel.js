@@ -43,6 +43,14 @@ export function validateLevel(level) {
     if (!CHECK_TYPES[check.type]) problems.push(`알 수 없는 채점 방식: ${check.type} (${check.id})`);
     if (!(check.category in SCORE_WEIGHTS)) problems.push(`알 수 없는 범주: ${check.category} (${check.id})`);
     else sums[check.category] += check.points;
+    for (const role of check.requires || []) {
+      if (!ROLES.includes(role)) problems.push(`${check.id}의 requires에 잘못된 성분: ${role}`);
+    }
+    // 성분 카드를 직접 확인하는 항목은 requires로 필요한 성분을 밝혀야 '확인 못 함' 처리가 정확해진다.
+    const needed = { roleOrder: check.order, agreement: ['S', 'V'], roleMatches: [check.role] }[check.type] || [];
+    for (const role of needed) {
+      if (!(check.requires || []).includes(role)) problems.push(`${check.id}의 requires에 ${role}가 빠짐`);
+    }
     for (const dep of check.dependsOn || []) {
       if (!checkIds.has(dep)) problems.push(`${check.id}가 앞에 없는 항목 ${dep}에 의존함`);
     }
@@ -61,6 +69,13 @@ export function validateLevel(level) {
 
   if (!Array.isArray(level.structure.clauses) || level.structure.clauses.length === 0) {
     problems.push('structure.clauses가 비어 있음');
+  } else {
+    level.structure.clauses.forEach((clause, i) => {
+      if (!Array.isArray(clause.slots) || clause.slots.length === 0) problems.push(`${i + 1}번째 절에 필수 성분(slots)이 없음`);
+      for (const role of clause.slots || []) {
+        if (!['S', 'V', 'O', 'C'].includes(role)) problems.push(`${i + 1}번째 절의 필수 성분이 잘못됨: ${role}`);
+      }
+    });
   }
   if (!Array.isArray(level.hints.steps) || level.hints.steps.length === 0) {
     problems.push('단계별 힌트가 없음');

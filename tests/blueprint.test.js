@@ -27,8 +27,15 @@ describe('건물 설계도', () => {
     const ids = ['the-cat', 'sleep'];
     expect(makeBlueprint(level, ids).warnings).toEqual([]);
     const bp = makeBlueprint(level, ids, scoreSentence(level, ids));
-    expect(bp.warnings).toEqual([{ floor: 0, role: 'V' }]);
+    expect(bp.warnings).toEqual([{ floor: 0, role: 'V', kind: 'check' }]);
     expect(bp.success).toBe(false);
+  });
+
+  it('필수 성분이 빠진 채 제출하면 빈자리에 "없음" 경고가 붙는다', () => {
+    const ids = ['sleeps'];
+    const bp = makeBlueprint(level, ids, scoreSentence(level, ids));
+    expect(bp.warnings).toEqual([{ floor: 0, role: 'S', kind: 'missing' }]);
+    expect(bp.completed).toBe(false); // 60점 → 깃발 없음
   });
 
   it('정답을 제출하면 울타리(조건 충족)와 깃발(완공) 표시', () => {

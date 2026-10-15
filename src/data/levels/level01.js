@@ -8,9 +8,14 @@
 //  tense  : 동사의 시제 (present 현재, past 과거)
 //  gloss  : 단어 뜻 (단어 뜻 보기 설정에서 사용)
 //
+// ── 필수 성분 ──
+//  structure.clauses[절].slots 에 적은 성분이 빠지면, 빠진 성분 하나마다 40점을 별도로 감점한다.
+//  (점수는 src/config.js의 MISSING_ROLE_PENALTY에서 바꿀 수 있다)
+//
 // ── 채점 항목(checks) ──
 //  각 항목은 한 가지 범주(category)에만 속한다. → 같은 실수를 두 범주에서 깎지 않는다.
-//  dependsOn : 앞 항목이 통과해야 확인할 수 있는 항목. 앞 항목이 실패하면 '확인 보류'가 된다.
+//  requires  : 이 항목을 확인하는 데 필요한 성분. 빠져 있으면 '확인 못 함'(감점 없음)이 된다.
+//  dependsOn : 앞 항목이 통과해야 확인할 수 있는 항목. 앞 항목이 실패하면 '확인 보류'(0점)가 된다.
 //  target    : 실패했을 때 건물과 문장에서 표시할 성분
 
 export default {
@@ -47,42 +52,32 @@ export default {
 
   checks: [
     {
-      id: 'G1', category: 'grammar', points: 6, type: 'hasRole', clause: 0, role: 'S', target: 'S',
-      pass: '주어(누가)가 들어 있어요.',
-      fail: '문장에 주어(누가)가 빠져 있어요. 건물 왼쪽의 주어 기둥이 비어 있어요.',
-    },
-    {
-      id: 'G2', category: 'grammar', points: 6, type: 'hasRole', clause: 0, role: 'V', target: 'V',
-      pass: '동사(무엇을 하다)가 들어 있어요.',
-      fail: '문장에 동사(무엇을 하다)가 빠져 있어요. 건물 오른쪽의 동사 기둥이 비어 있어요.',
-    },
-    {
-      id: 'G3', category: 'grammar', points: 9, type: 'roleOrder', clause: 0, order: ['S', 'V'], target: 'V',
-      dependsOn: ['G1', 'G2'],
+      id: 'G1', category: 'grammar', points: 15, type: 'roleOrder', clause: 0, order: ['S', 'V'], target: 'V',
+      requires: ['S', 'V'],
       pass: '주어 → 동사 순서가 맞아요.',
       fail: '영어 문장은 보통 주어가 동사보다 먼저 와요. 두 카드의 순서를 확인해 보세요.',
     },
     {
-      id: 'G4', category: 'grammar', points: 9, type: 'agreement', clause: 0, target: 'V',
-      dependsOn: ['G1', 'G2'],
+      id: 'G2', category: 'grammar', points: 15, type: 'agreement', clause: 0, target: 'V',
+      requires: ['S', 'V'],
       pass: '주어와 동사의 모양이 서로 잘 맞아요.',
       fail: '주어가 한 명·한 마리(3인칭 단수)일 때, 현재형 동사의 모양이 어떻게 되는지 확인해 보세요.',
     },
     {
       id: 'M1', category: 'meaning', points: 15, type: 'roleMatches', clause: 0, role: 'S',
-      match: { sem: 'cat', number: 'sg' }, target: 'S', dependsOn: ['G1'],
+      match: { sem: 'cat', number: 'sg' }, target: 'S', requires: ['S'],
       pass: '"고양이 한 마리"라는 뜻이 잘 전달돼요.',
       fail: '의뢰는 고양이 "한 마리"에 대한 이야기예요. 주어가 몇 마리를 뜻하는지 확인해 보세요.',
     },
     {
       id: 'M2', category: 'meaning', points: 15, type: 'roleMatches', clause: 0, role: 'V',
-      match: { sem: 'sleep' }, target: 'V', dependsOn: ['G2'],
+      match: { sem: 'sleep' }, target: 'V', requires: ['V'],
       pass: '"잠을 잔다"라는 행동이 잘 전달돼요.',
       fail: '고양이가 하는 행동이 의뢰 내용과 같은지 확인해 보세요.',
     },
     {
       id: 'C1', category: 'condition', points: 25, type: 'roleMatches', clause: 0, role: 'V',
-      match: { tense: 'present' }, target: 'V', dependsOn: ['G2'],
+      match: { tense: 'present' }, target: 'V', requires: ['V'],
       pass: '현재 시제 조건을 지켰어요.',
       fail: '평소에 늘 하는 일은 현재 시제로 나타내요. 동사의 시제를 확인해 보세요.',
     },

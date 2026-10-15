@@ -76,13 +76,13 @@ describe('플레이 진행 상태', () => {
     s = sessionReducer(s, { type: 'ADD_CARD', id: 'sleep' });
     s = sessionReducer(s, { type: 'SUBMIT', level, now: 1 });
     expect(s.phase).toBe('result');
-    expect(currentResult(s).total).toBe(81);
+    expect(currentResult(s).total).toBe(75);
     s = sessionReducer(s, { type: 'EDIT' });
     s = sessionReducer(s, { type: 'REMOVE_AT', index: 1 });
     expect(currentResult(s)).toBeNull(); // 카드가 바뀌면 이전 오류 표시를 지운다
     s = sessionReducer(s, { type: 'ADD_CARD', id: 'sleeps' });
     s = sessionReducer(s, { type: 'SUBMIT', level, now: 2 });
-    expect(s.attempts.map((a) => a.result.total)).toEqual([81, 100]);
+    expect(s.attempts.map((a) => a.result.total)).toEqual([75, 100]);
   });
 
   it('빈 문장은 제출할 수 없다', () => {

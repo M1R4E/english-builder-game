@@ -126,8 +126,9 @@ function stairs(from, state) {
   return g;
 }
 
-function warning(f, role, floor) {
-  const text = `⚠ ${ROLE_LABELS[role] ?? '문장'} 확인`;
+function warning(f, role, floor, kind) {
+  const name = ROLE_LABELS[role] ?? '문장';
+  const text = kind === 'missing' ? `🚧 ${name} 없음` : `⚠ ${name} 확인`;
   const label = makeLabel(text, 'warn', 1);
   if (role === 'S' || role === 'V') {
     label.position.set(role === 'S' ? -W / 2 : W / 2, floorY(f) + H + 0.35, D / 2 + 0.55);
@@ -196,7 +197,7 @@ export function buildParts(bp) {
 
   for (const w of bp.warnings) {
     const floor = bp.floors[w.floor];
-    add(`warn-${w.floor}-${w.role}`, 1, () => warning(w.floor, w.role, floor));
+    add(`warn-${w.floor}-${w.role}`, w.kind, () => warning(w.floor, w.role, floor, w.kind));
   }
 
   const n = bp.floors.length;

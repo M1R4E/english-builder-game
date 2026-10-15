@@ -55,11 +55,15 @@ export function makeBlueprint(level, ids, result = null) {
   // 제출 결과의 실패 항목 → 건물 위 경고 표시
   const warnings = [];
   if (result) {
+    // 빠진 필수 성분 → 그 자리에 경고
+    for (const m of result.missing ?? []) {
+      warnings.push({ floor: Math.min(m.clause, floorCount - 1), role: m.role, kind: 'missing' });
+    }
     for (const check of result.checks) {
       if (check.status !== 'fail' || !check.target) continue;
       const floor = Math.min(check.clause, floorCount - 1);
       if (!warnings.some((w) => w.floor === floor && w.role === check.target)) {
-        warnings.push({ floor, role: check.target });
+        warnings.push({ floor, role: check.target, kind: 'check' });
       }
     }
   }
