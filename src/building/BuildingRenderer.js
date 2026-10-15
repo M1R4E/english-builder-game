@@ -24,11 +24,13 @@ const CLICK_MOVE_LIMIT = 6; // 이보다 많이 끌면(px) 클릭이 아니라 �
 // 건물 모양 자체는 만들지 않고, 밖에서 만든 건물(Group)을 받아서 보여 준다.
 // options.interactive: false면 마우스·손가락으로 돌릴 수 없다 (메인 화면용)
 // options.autoRotate : true면 카메라가 건물 주위를 천천히 돈다
-// options.onPick     : 자리 부품(기둥, 칸)을 누르면 그 자리 key로 호출된다
+// options.onPick     : 방·계단 부품을 누르면 그 공정 단위(ref)로 호출된다
+// options.buildSeconds: 새 부품들이 이 시간(초) 안에 모두 등장하도록 간격을 줄인다 (메인 화면용)
 export class BuildingRenderer {
-  constructor(container, { interactive = true, autoRotate = false, onPick = null } = {}) {
+  constructor(container, { interactive = true, autoRotate = false, onPick = null, buildSeconds = null } = {}) {
     this.container = container;
     this.onPick = onPick;
+    this.buildSeconds = buildSeconds;
     this.celebration = null; // 진행 중인 완공 연출 { startAt }
     this.lowPower = isLowPowerDevice();
     this.animations = []; // 등장 애니메이션 중인 부품 목록
@@ -145,6 +147,9 @@ export class BuildingRenderer {
     }
 
     const now = performance.now() / 1000;
+    const newCount = parts.filter((p) => !this.partMap.has(p.key)).length;
+    const gap = this.buildSeconds ? Math.min(0.06, this.buildSeconds / Math.max(newCount, 1)) : 0.06;
+    const duration = this.buildSeconds ? 0.3 : 0.4;
     let order = 0;
     for (const p of parts) {
       if (this.partMap.has(p.key)) continue;
@@ -164,7 +169,7 @@ export class BuildingRenderer {
       // 처음 화면을 열 때만 애니메이션 없이 바로 보여 줘도 되지만, 짓는 느낌을 위해 항상 등장시킨다.
       pivot.userData.targetScale = new THREE.Vector3(1, 1, 1);
       pivot.scale.setScalar(0.0001);
-      this.animations.push({ obj: pivot, startAt: now + order * 0.06, duration: 0.4 });
+      this.animations.push({ obj: pivot, startAt: now + order * gap + (p.delay ?? 0), duration });
       order += 1;
       this.buildingRoot.add(pivot);
       this.partMap.set(p.key, { sig: p.sig, obj: pivot });

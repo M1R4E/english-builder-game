@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { PREDICTION_STEP, WON_PER_POINT } from '../config.js';
 import { formatWon, MAX_WON, toWon } from '../game/money.js';
-import { getSlots } from '../game/slots.js';
-import { IconFloor, IconPillar, IconPlant, IconRoom, IconStairs } from './Icons.jsx';
+import { IconPillar, IconPlant, IconRoom, IconStairs } from './Icons.jsx';
 import Window from './Window.jsx';
 
 const STAMP_MS = 900; // 도장 찍는 연출 시간
@@ -14,24 +13,22 @@ const today = () => {
 
 // 품목 이름과 아이콘 (문장 성분 → 건축 부품)
 const ITEM_OF_ROLE = {
-  S: { name: '주어 기둥', Icon: IconPillar },
-  V: { name: '동사 기둥', Icon: IconPillar },
-  O: { name: '목적어 칸', Icon: IconRoom },
-  C: { name: '보어 칸', Icon: IconRoom },
+  S: { name: '주어 방', Icon: IconPillar },
+  V: { name: '동사 방', Icon: IconPillar },
+  O: { name: '목적어 방', Icon: IconRoom },
+  C: { name: '보어 방', Icon: IconRoom },
+  M: { name: '장식 방 (수식어)', Icon: IconPlant },
   CONJ: { name: '접속사 계단', Icon: IconStairs },
-  M: { name: '장식 (수식어)', Icon: IconPlant },
 };
 
-// 필요한 자리 수를 세어 품목 목록을 만든다. 예: 층 1, 주어 기둥 1, 동사 기둥 1
+// 필요한 방 수를 세어 품목 목록을 만든다. 예: 주어 방 1, 동사 방 1
+// 층수는 플레이어가 공정 첫 단계에서 직접 정하므로 품목에 적지 않는다.
 function itemsOf(level) {
-  const counts = {};
-  for (const slot of getSlots(level)) counts[slot.role] = (counts[slot.role] ?? 0) + 1;
-  return [
-    { key: 'floor', name: '층 (절)', Icon: IconFloor, count: level.structure.clauses.length },
-    ...['S', 'V', 'O', 'C', 'CONJ', 'M']
-      .filter((role) => counts[role])
-      .map((role) => ({ key: role, ...ITEM_OF_ROLE[role], count: counts[role] })),
-  ];
+  const counts = { CONJ: level.floors.length - 1 };
+  for (const floor of level.floors) for (const comp of floor.comps) counts[comp.role] = (counts[comp.role] ?? 0) + 1;
+  return ['S', 'V', 'O', 'C', 'M', 'CONJ']
+    .filter((role) => counts[role])
+    .map((role) => ({ key: role, ...ITEM_OF_ROLE[role], count: counts[role] }));
 }
 
 // 특별 요청 사항의 상태: 연결된 채점 항목이 모두 통과하면 '충족'

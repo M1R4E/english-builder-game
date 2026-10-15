@@ -7,6 +7,8 @@ import { BuildingRenderer } from '../building/BuildingRenderer.js';
 // 화면에서 사라질 때는 렌더러를 정리(dispose)해서 메모리가 새지 않게 한다.
 //  onPick       : 자리 부품(기둥 등)을 누르면 그 자리 key로 호출
 //  celebrateKey : 이 값이 새로 바뀔 때마다 완공 연출(회전 + 통통 튀기)을 한 번 한다 (0이면 안 함)
+//  rebuildKey   : 이 값이 바뀌면 건물을 모두 지우고 처음부터 다시 짓는다 (메인 화면 견본 건물용)
+//  buildSeconds : 새 부품이 이 시간(초) 안에 모두 등장하게 한다
 export default function BuildingView({
   parts,
   bounds,
@@ -16,6 +18,8 @@ export default function BuildingView({
   autoRotate = false,
   onPick,
   celebrateKey = 0,
+  rebuildKey = null,
+  buildSeconds = null,
 }) {
   const containerRef = useRef(null);
   const rendererRef = useRef(null);
@@ -29,6 +33,7 @@ export default function BuildingView({
       renderer = new BuildingRenderer(containerRef.current, {
         interactive,
         autoRotate,
+        buildSeconds,
         onPick: (key) => onPickRef.current?.(key), // 항상 최신 onPick을 부른다
       });
     } catch (err) {
@@ -44,6 +49,11 @@ export default function BuildingView({
     // 렌더러는 처음 한 번만 만든다 (interactive, autoRotate는 처음 값만 사용)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // (부품 갱신보다 먼저 실행되어야 하므로 위에 둔다)
+  useEffect(() => {
+    if (rebuildKey !== null) rendererRef.current?.clearBuilding();
+  }, [rebuildKey]);
 
   useEffect(() => {
     rendererRef.current?.updateParts(parts, bounds);

@@ -6,9 +6,10 @@ import BuildingView from './BuildingView.jsx';
 const INTERVAL_MS = 1000; // 견본 건물을 바꾸는 간격 (1초)
 
 // 메인 화면·우편함 화면 뒤의 3D 배경.
-// cycling이 true면 견본 건물을 1초마다 다음 것으로 바꾼다. 바뀐 부품만 새로 지어지며 등장한다.
+// cycling이 true면 견본 건물을 1초마다 다음 것으로 바꾼다.
+// 바꿀 때마다 건물을 모두 지우고 1층부터 다시 지어 올린다 (깃발·울타리·나무는 마지막에 등장).
 // 화면을 누를 수 있도록 마우스 조작은 끄고, 카메라는 천천히 돈다.
-export default function ShowcaseBackground({ cycling, still = 3 }) {
+export default function ShowcaseBackground({ cycling, still = 0 }) {
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
@@ -22,7 +23,14 @@ export default function ShowcaseBackground({ cycling, still = 3 }) {
 
   return (
     <div className="showcase" aria-hidden="true">
-      <BuildingView parts={parts} bounds={SHOWCASE_BOUNDS} interactive={false} autoRotate />
+      <BuildingView
+        parts={parts}
+        bounds={SHOWCASE_BOUNDS}
+        interactive={false}
+        autoRotate
+        rebuildKey={shown}
+        buildSeconds={0.45}
+      />
     </div>
   );
 }

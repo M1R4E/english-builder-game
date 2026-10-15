@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { LEVELS } from '../data/levels/index.js';
+import { isNew, isUnlocked } from '../game/progress.js';
+import IconButton from './IconButton.jsx';
+import { IconHome } from './Icons.jsx';
 import Stars from './Stars.jsx';
 
 const OPEN_MS = 550; // 우편함 문이 열리는 시간
@@ -11,7 +13,9 @@ const reduceMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)
 // 레벨 선택 = 우편함.
 //  닫힌 우편함을 누르면 문이 열리고, 안에 주문서(레벨)들이 보인다.
 //  주문서를 누르면 우편함 밖으로 꺼내는 연출 뒤에 그 레벨의 주문서 화면으로 넘어간다.
-export default function Mailbox({ startOpen, progress, onOpened, onSelect, onBack }) {
+//  아직 해금되지 않은 난이도의 주문서는 보이지 않는다. 새로 도착한 주문서에는 New! 표시.
+//  게임에서 돌아올 때(startOpen)는 열리는 연출 없이 바로 열린 우편함을 보여 준다.
+export default function Mailbox({ levels, broken = [], startOpen, progress, onOpened, onSelect, onBack }) {
   const [state, setState] = useState(startOpen ? 'open' : 'closed'); // closed → opening → open
   const [picked, setPicked] = useState(null);
   const timer = useRef(null);
@@ -32,11 +36,12 @@ export default function Mailbox({ startOpen, progress, onOpened, onSelect, onBac
     timer.current = setTimeout(() => onSelect(id), reduceMotion() ? 50 : PICK_MS);
   };
 
+  const visible = levels.filter((l) => isUnlocked(l, levels, progress));
+  const lockedCount = levels.length - visible.length;
+
   return (
     <main className="mailbox-screen">
-      <button type="button" className="btn btn-ghost btn-small back-to-title" onClick={onBack}>
-        ◀ 처음 화면
-      </button>
+      <IconButton icon={IconHome} label="메인 화면으로" onClick={onBack} className="back-to-title" />
 
       {state !== 'open' ? (
         <div className="mailbox-closed-wrap">
@@ -59,27 +64,35 @@ export default function Mailbox({ startOpen, progress, onOpened, onSelect, onBac
           <p className="tap-hint">우편함을 눌러 주문서를 확인하세요</p>
         </div>
       ) : (
-        <section className={`mailbox-open${picked !== null ? ' has-picked' : ''}`} aria-label="우편함 안의 주문서">
+        <section
+          className={`mailbox-open${picked !== null ? ' has-picked' : ''}${startOpen ? ' no-anim' : ''}`}
+          aria-label="우편함 안의 주문서"
+        >
           <header className="mailbox-open-head">
             <span className="mailbox-open-title">우편함</span>
-            <span className="muted small">주문서 {LEVELS.length}통</span>
+            <span className="muted small">주문서 {visible.length}통</span>
           </header>
           <ul className="ticket-list">
-            {LEVELS.map(({ level, problems }) => {
+            {visible.map((level) => {
               const p = progress[level.id];
-              const broken = problems.length > 0;
-              const status = broken ? '준비 중' : p?.completed ? '완공' : p ? '공사 중' : '새 주문';
+              const fresh = isNew(level, levels, progress);
+              const status = p?.completed ? '완공' : p?.opened ? '공사 중' : '새 주문';
               const tilt = ((level.id * 7) % 5) - 2; // 주문서마다 살짝 다르게 기울이기
               return (
                 <li key={level.id}>
                   <button
                     type="button"
-                    className={`order-ticket${picked === level.id ? ' is-picked' : ''}`}
+                    className={`order-ticket${picked === level.id ? ' is-picked' : ''}${fresh ? ' is-new' : ''}`}
                     style={{ '--tilt': `${tilt * 0.8}deg` }}
-                    disabled={broken || picked !== null}
+                    disabled={picked !== null}
                     onClick={() => pick(level.id)}
-                    aria-label={`주문서 ${level.id}번 ${level.title}, 난이도 ${level.difficulty}, ${status}`}
+                    aria-label={`주문서 ${level.id}번 ${level.title}, 난이도 ${level.difficulty}, ${status}${fresh ? ', 새로 도착' : ''}`}
                   >
+                    {fresh && (
+                      <span className="new-badge" aria-hidden="true">
+                        New!
+                      </span>
+                    )}
                     <span className="ticket-no">No. {String(level.id).padStart(4, '0')}</span>
                     <span className="ticket-title">{level.title}</span>
                     <span className="ticket-difficulty">
@@ -91,14 +104,18 @@ export default function Mailbox({ startOpen, progress, onOpened, onSelect, onBac
                       </span>
                     </span>
                     <span className="ticket-status">
-                      <span className={`state-tag ${p?.completed ? 'ok' : broken ? 'warn' : 'mute'}`}>{status}</span>
-                      {p && <Stars count={p.stars} />}
+                      <span className={`state-tag ${p?.completed ? 'ok' : 'mute'}`}>{status}</span>
+                      {p?.completed && <Stars count={p.stars} />}
                     </span>
                   </button>
                 </li>
               );
             })}
           </ul>
+          {lockedCount > 0 && (
+            <p className="mailbox-note small">지금 있는 주문서 중 하나를 완공하면, 더 어려운 주문서가 도착해요.</p>
+          )}
+          {broken.length > 0 && <p className="mailbox-note small">준비 중인 주문서 {broken.length}통이 있어요.</p>}
         </section>
       )}
     </main>

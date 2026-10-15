@@ -1,76 +1,86 @@
 import { COMPLETE_THRESHOLD } from '../config.js';
-import { analyzePlaced } from '../game/analyzeSentence.js';
-import { getSlots } from '../game/slots.js';
+import { compParts, compRef, firstOpenStep, getSteps, isRequired, resolveAll, roomName } from '../game/structure.js';
 
-// ── 자리 배치 → 건물 설계도 ──
+// ── 공정 선택 → 건물 설계도 ──
 // 3D 코드와 분리된 순수 계산이다. "어떤 부품이 어떤 상태인지"만 정한다.
 //
-// 문법 ↔ 건축 대응
-//  절(clause)          → 층(floor) = 방 하나
-//  주어(S) / 동사(V)    → 왼쪽 기둥 / 오른쪽 기둥
-//  목적어(O) / 보어(C)  → 방 안쪽의 칸
-//  수식어(M)            → 실내 장식(화분)
-//  접속사(CONJ)         → 층과 층을 잇는 계단
-//  방 완성(필수 자리가 모두 채워짐) → 그 층의 지붕 (정답 여부와 관계없음)
-//  제출 결과: 특별 요청 사항 충족 → 울타리, 완공 → 깃발
+// 문법 ↔ 건축 대응 (자세한 설명은 game/structure.js)
+//  층 = 절, 방 = 문장 성분(문장 순서대로 왼쪽→오른쪽), 계단 = 접속사
+//  방 안: 가구 = 중심 단어(복수면 가구 2개), 문패 = 관사, 카펫 = 꾸미는 형용사, 출입문 = 전치사, 받침대 = be동사
+//  동사 가구의 재질 = 시제 (현재: 밝은 나무 "지금 자재" / 과거: 회색 돌 "옛날 자재" / -ing: 하늘색)
+//  층의 방이 모두 지어지면 그 층의 지붕, 완공(70점 이상)이면 깃발·울타리·나무
 //
-// 자리 상태: 'filled' 카드가 놓임 / 'ghost' 비어 있음(반투명으로 위치만 표시)
-// 모든 자리 부품에는 자리 key가 붙어 있어, 3D 화면에서 눌러 고를 수 있다.
-// options.activeSlot: 지금 카드를 고르고 있는 자리 key. 그 부품을 강조한다.
+// 방 상태: 'ghost' 아직 시작 전(반투명) / 'building' 짓는 중 / 'done' 다 지음
 
-export function makeBlueprint(level, placed, result = null, { activeSlot = null } = {}) {
-  const slots = getSlots(level);
-  const analysis = analyzePlaced(level, placed);
-  const state = (key) => (analysis.bySlot[key] ? 'filled' : 'ghost');
-  const word = (key) => analysis.bySlot[key]?.text;
+export const ROOM_WIDTH = { core: 2.6, mod: 1.9 };
 
-  const floors = level.structure.clauses.map((_, i) => {
-    const mine = slots.filter((s) => s.clause === i);
-    const words = {};
-    for (const s of mine) if (word(s.key)) words[s.key] = word(s.key);
+export function makeBlueprint(level, choices, result = null, { activeUnit = null } = {}) {
+  const floorsChosen = choices.floors === level.floors.length;
+  const errorRefs = new Set(result?.errorRefs ?? []);
+  const completed = Boolean(result && result.total >= COMPLETE_THRESHOLD);
+  if (!floorsChosen) {
+    return { floors: [], stairs: [], completed, success: false, activeUnit, maxWidth: ROOM_WIDTH.core * 2 };
+  }
+
+  const all = resolveAll(level, choices);
+  const steps = getSteps(level, choices);
+  const open = firstOpenStep(level, choices);
+  const started = (unit) => steps.some((s) => s.unit === unit && choices[s.key] !== undefined) || open?.unit === unit;
+
+  const floors = level.floors.map((floor, f) => {
+    const rooms = floor.comps.map((comp, i) => {
+      const r = all.floors[f].comps[i];
+      const ref = compRef(f, comp);
+      const parts = compParts(comp, r.word);
+      const state = r.done ? 'done' : started(ref) ? 'building' : 'ghost';
+      return {
+        ref,
+        role: comp.role,
+        kind: isRequired(comp) ? 'core' : 'mod',
+        name: roomName(level, f, comp),
+        state,
+        active: activeUnit === ref,
+        warn: errorRefs.has(ref),
+        word: r.word ? (r.form?.text ?? r.word.text) : null,
+        wordPos: r.word?.pos ?? null,
+        plural: r.form?.number === 'pl',
+        tense: comp.type === 'verb' ? (r.finite?.tense ?? null) : null,
+        det: parts.includes('det') && r.det ? r.det.text || '' : null,
+        adj: parts.includes('adj') && r.adj ? r.adj.text : null,
+        prep: parts.includes('prep') && r.prep ? r.prep.text || '' : null,
+        aux: parts.includes('aux') && r.aux ? r.aux.text || '' : null,
+        text: r.text,
+      };
+    });
     return {
-      index: i,
-      hasCards: mine.some((s) => analysis.bySlot[s.key]),
-      pillars: { S: state(`${i}-S`), V: state(`${i}-V`) },
-      rooms: mine.filter((s) => s.role === 'O' || s.role === 'C').map((s) => ({ role: s.role, key: s.key, state: state(s.key) })),
-      mods: mine.filter((s) => s.kind === 'mod').map((s) => ({ key: s.key, state: state(s.key) })),
-      words,
-      active: mine.some((s) => s.key === activeSlot) ? activeSlot : null,
-      coreComplete: Boolean(analysis.bySlot[`${i}-S`] && analysis.bySlot[`${i}-V`]),
-      roomComplete: mine.filter((s) => s.required).every((s) => analysis.bySlot[s.key]),
-      isTop: i === level.structure.clauses.length - 1,
+      index: f,
+      rooms,
+      width: rooms.reduce((s, room) => s + ROOM_WIDTH[room.kind], 0),
+      roofed: rooms.every((room) => room.state === 'done'),
+      isTop: f === level.floors.length - 1,
     };
   });
 
-  // 층 사이 계단(접속사). 문장 맨 앞 접속사(before: 0)도 1층과 2층을 잇는다.
-  const stairs = slots
-    .filter((s) => s.kind === 'link')
-    .map((s) => {
-      const from = s.link.after ?? s.link.before;
-      return { from, to: from + 1, key: s.key, state: state(s.key), word: word(s.key), active: s.key === activeSlot };
-    });
-
-  // 제출 결과 → 건물 위 경고 표시 (빈 필수 자리, 실패한 항목이 가리키는 자리)
-  const warnings = [];
-  if (result) {
-    for (const m of result.missing ?? []) warnings.push({ slot: m.slot, kind: 'missing' });
-    for (const check of result.checks) {
-      if (check.status !== 'fail' || !check.target) continue;
-      if (!warnings.some((w) => w.slot === check.target)) warnings.push({ slot: check.target, kind: 'check' });
-    }
-  }
-
-  const conditionIds = new Set((level.conditions ?? []).flatMap((c) => c.checkIds ?? [c.checkId]));
-  const conditionChecks = result?.checks.filter((c) => conditionIds.has(c.id) || c.category === 'condition') ?? [];
+  const stairs = level.floors.slice(1).map((_, i) => {
+    const f = i + 1;
+    const ref = `L${f}`;
+    const word = all.links[ref];
+    return {
+      ref,
+      from: f - 1,
+      state: word ? 'done' : started(ref) ? 'building' : 'ghost',
+      word: word?.text ?? null,
+      active: activeUnit === ref,
+      warn: errorRefs.has(ref),
+    };
+  });
 
   return {
     floors,
     stairs,
-    warnings,
-    submitted: Boolean(result),
-    // 특별 요청 사항을 모두 지켰으면 울타리, 완공 점수 이상이면 깃발
-    conditionsMet: conditionChecks.length > 0 && conditionChecks.every((c) => c.status === 'pass'),
-    completed: Boolean(result && result.total >= COMPLETE_THRESHOLD),
+    completed,
     success: Boolean(result?.perfect),
+    activeUnit,
+    maxWidth: Math.max(...floors.map((fl) => fl.width)),
   };
 }

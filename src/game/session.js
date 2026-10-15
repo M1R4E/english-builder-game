@@ -1,41 +1,44 @@
 import { scoreSentence } from './scoring.js';
-import { fitsSlot, getSlots, nextEmptySlot, samePlaced } from './slots.js';
+import { clearAfterWord, firstOpenStep, getSteps, isComplete, sameChoices, stepOptions } from './structure.js';
 
 // 한 레벨을 플레이하는 동안의 상태와, 그 상태를 바꾸는 규칙(reducer).
 // 화면(React)은 "무슨 일이 일어났는지(action)"만 알려 주고,
 // 상태를 실제로 바꾸는 계산은 모두 여기서 한다. → 테스트하기 쉽고 실수가 줄어든다.
 //
-// phase(진행 단계): 'predict' 예상 점수 입력 → 'build' 문장 조립 → 'result' 결과 확인
+// phase(진행 단계): 'predict' 예상 점수 입력 → 'build' 건물 짓기 → 'result' 결과 확인
 //
-// 조립 방식: 건물의 자리(주어 기둥 등)를 고르고(activeSlot), 그 자리에 들어갈 카드를 놓는다(placed).
-// 채점과 건물 설계도는 placed(자리 key → 카드 id)를 그대로 쓴다.
+// 짓기는 정해진 공정 순서를 따른다 (structure.js의 getSteps).
+//  - 지금 단계(currentStep)에서 하나를 고르면 다음 단계로 넘어간다.
+//  - 다 지은 방은 다시 눌러 "고쳐 짓기"(editStep)를 할 수 있다. 그 방의 단계를 처음부터 다시 거친다.
+//  - 층수는 정답일 때만 다음으로 넘어간다 (틀리면 안내만 하고 기록해 둔다).
 
 export function createSession(level) {
-  const slots = getSlots(level);
   return {
     levelId: level.id,
     phase: 'predict',
     prediction: 50,
-    slots,
-    placed: {}, // 자리 key → 카드 id
-    activeSlot: slots[0]?.key ?? null, // 지금 카드를 고르고 있는 자리
-    history: [], // 되돌리기용 이전 placed 목록
-    attempts: [], // 제출 기록 [{ placed, result, at }]
-    hintStep: 0, // 지금까지 펼친 힌트 단계 수
+    choices: {}, // 단계 key → 고른 값
+    editStep: null, // 고쳐 짓는 중인 단계 key
+    history: [], // 되돌리기용 이전 choices 목록
+    attempts: [], // 제출 기록 [{ choices, result, at }]
+    hintStep: 0,
+    floorMistakes: 0, // 층수를 잘못 고른 횟수 (학습 기록용)
     startedAt: null,
   };
 }
 
-export const placedCount = (state) => Object.keys(state.placed).length;
-
-function withPlaced(state, placed, activeSlot = state.activeSlot) {
-  return { ...state, placed, activeSlot, history: [...state.history, state.placed] };
+// 지금 고를 단계
+export function currentStep(level, state) {
+  const steps = getSteps(level, state.choices);
+  return (state.editStep && steps.find((s) => s.key === state.editStep)) || firstOpenStep(level, state.choices);
 }
 
-function without(placed, key) {
-  const { [key]: _removed, ...rest } = placed;
-  return rest;
-}
+const withChoices = (state, choices, editStep = null) => ({
+  ...state,
+  choices,
+  editStep,
+  history: [...state.history, state.choices],
+});
 
 export function sessionReducer(state, action) {
   const building = state.phase === 'build';
@@ -46,55 +49,67 @@ export function sessionReducer(state, action) {
     case 'START':
       return { ...state, phase: 'build', startedAt: action.now };
 
-    // 건물의 자리를 고른다 (3D 부품을 누르거나, 아래 공정표의 자리를 누른다)
-    case 'SELECT_SLOT':
-      if (!building || !state.slots.some((s) => s.key === action.key)) return state;
-      return { ...state, activeSlot: action.key };
-
-    // 지금 고른 자리에 카드를 놓는다. 이미 놓인 카드를 다시 누르면 뺀다.
-    // 놓은 뒤에는 다음 빈자리로 넘어간다.
-    case 'PLACE': {
-      const slot = state.slots.find((s) => s.key === state.activeSlot);
-      const card = action.level.cards.find((c) => c.id === action.id);
-      if (!building || !slot || !card || !fitsSlot(card, slot)) return state;
-      const usedElsewhere = Object.entries(state.placed).some(([k, id]) => id === card.id && k !== slot.key);
-      if (usedElsewhere) return state;
-      if (state.placed[slot.key] === card.id) return withPlaced(state, without(state.placed, slot.key));
-      const placed = { ...state.placed, [slot.key]: card.id };
-      return withPlaced(state, placed, nextEmptySlot(state.slots, placed, slot.key));
+    // 지금 단계에서 하나를 고른다
+    case 'CHOOSE': {
+      if (!building) return state;
+      const { level, value } = action;
+      const step = currentStep(level, state);
+      if (!step || !stepOptions(step, state.choices).some((o) => o.value === value)) return state;
+      if (step.key === 'floors' && value !== level.floors.length) {
+        return { ...state, floorMistakes: state.floorMistakes + 1 };
+      }
+      let choices = { ...state.choices, [step.key]: value };
+      if (step.part === 'word' && state.choices[step.key] !== value) choices = clearAfterWord(choices, step.ref);
+      // 고쳐 짓는 중이면 같은 방의 다음 단계로, 아니면 자동으로 다음 빈 단계로
+      let editStep = null;
+      if (state.editStep) {
+        const steps = getSteps(level, choices);
+        const i = steps.findIndex((s) => s.key === step.key);
+        const next = steps[i + 1];
+        if (next && next.unit === step.unit) editStep = next.key;
+      }
+      return withChoices(state, choices, editStep);
     }
 
-    // 한 자리를 비운다
-    case 'CLEAR_SLOT':
-      if (!building || !state.placed[action.key]) return state;
-      return withPlaced(state, without(state.placed, action.key), action.key);
+    // 이미 지은(또는 짓기 시작한) 방을 다시 고쳐 짓는다
+    case 'EDIT_UNIT': {
+      if (!building) return state;
+      const steps = getSteps(action.level, state.choices);
+      const first = steps.find((s) => s.unit === action.unit);
+      if (!first || state.choices[first.key] === undefined) return state; // 아직 차례가 오지 않은 곳
+      return { ...state, editStep: first.key };
+    }
 
-    // 모든 자리를 비운다
-    case 'CLEAR':
-      if (!building || placedCount(state) === 0) return state;
-      return withPlaced(state, {}, state.slots[0]?.key ?? null);
+    case 'CANCEL_EDIT':
+      return { ...state, editStep: null };
 
     case 'UNDO': {
       if (!building || state.history.length === 0) return state;
-      const placed = state.history[state.history.length - 1];
       return {
         ...state,
-        placed,
+        choices: state.history[state.history.length - 1],
         history: state.history.slice(0, -1),
-        activeSlot: state.activeSlot ?? nextEmptySlot(state.slots, placed),
+        editStep: null,
       };
     }
+
+    // 처음부터 다시 짓기
+    case 'CLEAR':
+      if (!building || Object.keys(state.choices).length === 0) return state;
+      return withChoices(state, {});
 
     case 'HINT':
       return { ...state, hintStep: Math.min(state.hintStep + 1, action.maxSteps) };
 
+    // 건물을 다 지어야 제출할 수 있다 (화면에서 미리 막고 안내한다)
     case 'SUBMIT': {
-      if (!building || placedCount(state) === 0) return state;
-      const result = scoreSentence(action.level, state.placed);
+      if (!building || !isComplete(action.level, state.choices)) return state;
+      const result = scoreSentence(action.level, state.choices);
       return {
         ...state,
         phase: 'result',
-        attempts: [...state.attempts, { placed: state.placed, result, at: action.now }],
+        editStep: null,
+        attempts: [...state.attempts, { choices: state.choices, result, at: action.now }],
       };
     }
 
@@ -106,8 +121,8 @@ export function sessionReducer(state, action) {
   }
 }
 
-// 지금 놓인 카드가 마지막 제출 때와 똑같으면 그 채점 결과를 돌려준다 (오류 표시용).
-export function currentResult(state) {
+// 지금 건물이 마지막 제출 때와 똑같으면 그 채점 결과를 돌려준다 (오류 표시용).
+export function currentResult(level, state) {
   const last = state.attempts[state.attempts.length - 1];
-  return last && samePlaced(last.placed, state.placed) ? last.result : null;
+  return last && sameChoices(level, last.choices, state.choices) ? last.result : null;
 }

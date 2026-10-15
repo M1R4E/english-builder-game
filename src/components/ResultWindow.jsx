@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CATEGORY_LABELS, ESTIMATE_PENALTY_RATE, ESTIMATE_TOLERANCE, FIREWORKS_THRESHOLD } from '../config.js';
-import { sentenceText } from '../game/analyzeSentence.js';
+import { CATEGORY_LABELS, ESTIMATE_PENALTY_RATE, ESTIMATE_TOLERANCE, FIREWORKS_THRESHOLD, MAX_STARS } from '../config.js';
+import { sentenceText } from '../game/structure.js';
 import { formatWon, MAX_WON, toWon, wonText } from '../game/money.js';
 import Fireworks from './Fireworks.jsx';
 import Window from './Window.jsx';
@@ -51,16 +51,17 @@ function useCountUp(target, active, duration) {
 
 // 제출 결과 "점검 보고서" 창. 항목들이 차례대로 나타난다.
 //  1 성취 문구 → 2 청구 금액(숫자가 올라감) → 3 별(하나씩) → 4 항목별 그래프(그려짐, 높은 점수면 폭죽)
-//  → 5 필수 성분 → 6 점검 결과(빠르게 페이드 인) → 7 내 견적과 비교하기 → 8 최종 공사 대금 → 9 버튼
-// X 또는 확인 버튼으로 닫으면 문장 고치기로 돌아간다. "바로 보기"를 누르면 연출을 건너뛴다.
-export default function ResultWindow({ level, attempt, reward, attemptCount, onEdit, onExit }) {
+//  → 5 (잠깐 쉼) → 6 점검 결과(빠르게 페이드 인) → 7 내 견적과 비교하기 → 8 최종 공사 대금 → 9 버튼
+// X 또는 확인 버튼으로 닫으면 건물 고치기로 돌아간다. "바로 보기"를 누르면 연출을 건너뛴다.
+// 버튼: 우편함으로(바로 레벨 선택 화면) / 다음 레벨로(있을 때) / 확인(하고 고치기)
+export default function ResultWindow({ level, attempt, reward, attemptCount, onEdit, onExit, nextLevel, onNext }) {
   const { result } = attempt;
-  const sentence = sentenceText(level, attempt.placed);
+  const sentence = sentenceText(level, attempt.choices);
 
   // 고칠 점을 먼저, 그다음 통과 항목을 보여 준다.
   const order = { fail: 0, partial: 1, skipped: 2, blocked: 3, pass: 4 };
   const checks = [...result.checks].sort((a, b) => order[a.status] - order[b.status]);
-  const listItems = result.missing.length + checks.length;
+  const listItems = checks.length;
 
   // 각 단계가 시작되는 시각(ms)
   const times = useMemo(() => {
@@ -74,7 +75,7 @@ export default function ResultWindow({ level, attempt, reward, attemptCount, onE
     now += Math.max(reward.stars, 1) * STAR_GAP_MS + 250;
     t.push(now); // 4 그래프 (+ 폭죽)
     now += 4 * BAR_GAP_MS + 650;
-    t.push(now); // 5 필수 성분
+    t.push(now); // 5 (잠깐 쉼)
     now += 600;
     t.push(now); // 6 점검 결과
     now += 400 + listItems * 50;
@@ -123,7 +124,7 @@ export default function ResultWindow({ level, attempt, reward, attemptCount, onE
         )}
 
         <div className={`star-line reveal${shown(3)}`} aria-label={`별 ${reward.stars}개`}>
-          {[0, 1, 2].map((i) => (
+          {Array.from({ length: MAX_STARS }, (_, i) => (
             <span
               key={i}
               aria-hidden="true"
@@ -153,25 +154,13 @@ export default function ResultWindow({ level, attempt, reward, attemptCount, onE
             </div>
           ))}
         </div>
-        <div className={`cat-row penalty-row reveal${shown(5)}${result.penalty > 0 ? ' has-penalty' : ''}`}>
-          <span className="cat-label">필수 성분</span>
-          <span className="penalty-text">{result.penalty > 0 ? `${result.missing.length}개 빠짐` : '모두 갖춤'}</span>
-          <span className="cat-num">{result.penalty > 0 ? `−${wonText(result.penalty)}` : '차감 없음'}</span>
-        </div>
       </section>
 
       <section className={`report-section reveal-list${shown(6)}`}>
         <h3>점검 결과</h3>
         <ul className="check-list">
-          {result.missing.map((m, i) => (
-            <li key={`missing-${m.clause}-${m.role}`} className="check check-missing" style={{ '--i': i }}>
-              <span className="state-tag danger">성분 빠짐</span>
-              <span className="check-text">{m.message}</span>
-              <span className="check-points">−{wonText(m.penalty)}</span>
-            </li>
-          ))}
           {checks.map((c, i) => (
-            <li key={c.id} className={`check check-${c.status}`} style={{ '--i': i + result.missing.length }}>
+            <li key={c.id} className={`check check-${c.status}`} style={{ '--i': i }}>
               <span className={`state-tag ${STATUS[c.status].cls}`}>{STATUS[c.status].tag}</span>
               <span className="check-text">{c.message}</span>
               <span className="check-points">{wonText(c.earned)}</span>
@@ -250,9 +239,19 @@ export default function ResultWindow({ level, attempt, reward, attemptCount, onE
           <button type="button" className="btn btn-ghost" onClick={onExit}>
             우편함으로
           </button>
-          <button type="button" className="btn btn-primary" onClick={onEdit}>
-            {result.perfect ? '확인' : '확인하고 문장 고치기'}
+          <button type="button" className={`btn ${nextLevel && reward.completed ? 'btn-ghost' : 'btn-primary'}`} onClick={onEdit}>
+            {result.perfect ? '건물 다시 보기' : '확인하고 고치기'}
           </button>
+          {nextLevel && (
+            <button
+              type="button"
+              className={`btn ${reward.completed ? 'btn-primary' : 'btn-ghost'}`}
+              onClick={onNext}
+              title={`레벨 ${nextLevel.id} ${nextLevel.title}`}
+            >
+              다음 레벨로 ▶
+            </button>
+          )}
         </div>
       )}
     </Window>

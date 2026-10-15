@@ -35,7 +35,7 @@ export function computeReward(prediction, attemptScores) {
     best,
     latest: scores[scores.length - 1],
     completed: best >= COMPLETE_THRESHOLD,
-    stars: STAR_THRESHOLDS.filter((t) => best >= t).length, // 0~3
+    stars: STAR_THRESHOLDS.filter((t) => best >= t).length, // 0~5
     prediction: predicted,
     predictionDiff: diff, // 0~100
     predictionDirection: predicted > first ? 'over' : predicted < first ? 'under' : 'exact',

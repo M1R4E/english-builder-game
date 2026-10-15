@@ -27,16 +27,13 @@ export const PREDICTION_STEP = 5;
 // 결과 창에서 폭죽을 터뜨리는 기준 (이 점수 이상)
 export const FIREWORKS_THRESHOLD = 95;
 
-// 필수 성분(주어·동사·목적어·보어 중 그 레벨에서 꼭 필요한 것)이 빠졌을 때,
-// 빠진 성분 하나마다 감점하는 점수. 위 4개 항목과 별도로 총점에서 뺀다.
-// 40점 → 하나만 빠져도 최대 60점이라 완공(70점)할 수 없다.
-export const MISSING_ROLE_PENALTY = 40;
-
-// 이 점수 이상이면 "완공"
+// 이 점수 이상이면 "완공". 건물을 다 지어야 제출할 수 있으므로 빈자리 감점은 없다.
 export const COMPLETE_THRESHOLD = 70;
 
-// 별 개수 기준 (최고 점수 기준): ★ 70, ★★ 85, ★★★ 95
-export const STAR_THRESHOLDS = [70, 85, 95];
+// 별 개수 기준 (최고 점수 기준, 5개): 완공(70)하면 ★1개부터, 6점마다 하나씩 더
+//  ★ 70 · ★★ 76 · ★★★ 82 · ★★★★ 88 · ★★★★★ 94
+export const STAR_THRESHOLDS = [70, 76, 82, 88, 94];
+export const MAX_STARS = STAR_THRESHOLDS.length;
 
 // ── 견적 오차 차감 (최종 공사 대금) ──
 // 예상 청구 비용(견적)이 첫 청구 금액보다 많이 "높을수록" 최종 공사 대금에서 뺀다.

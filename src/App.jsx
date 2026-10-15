@@ -1,9 +1,13 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import Mailbox from './components/Mailbox.jsx';
 import PlayScreen from './components/PlayScreen.jsx';
 import ShowcaseBackground from './components/ShowcaseBackground.jsx';
 import TitleScreen from './components/TitleScreen.jsx';
-import { findLevel } from './data/levels/index.js';
+import { findLevel, LEVELS } from './data/levels/index.js';
+import { pickNextLevel } from './game/progress.js';
+
+// 고장 나지 않은(데이터 검사를 통과한) 레벨만
+const PLAYABLE = LEVELS.filter((e) => e.problems.length === 0).map((e) => e.level);
 
 // 화면 전환: 메인 화면 → 우편함(레벨 선택) → 레벨 플레이
 // (주소(URL)를 바꾸는 라우터를 쓰지 않아 GitHub Pages에서도 문제없이 작동한다.)
@@ -11,17 +15,26 @@ export default function App() {
   const [screen, setScreen] = useState('title'); // 'title' | 'mailbox' | 'play'
   const [mailboxOpened, setMailboxOpened] = useState(false); // 한 번 연 우편함은 돌아와도 열려 있게
   const [levelId, setLevelId] = useState(null);
-  // 레벨별 진행 상황 { [레벨 번호]: { completed, stars } }
+  const [playKey, setPlayKey] = useState(0); // 같은 레벨도 "다음 레벨로"로 들어오면 새 판으로
+  // 레벨별 진행 상황 { [레벨 번호]: { completed, stars, opened } }
   // 지금은 새로고침하면 사라진다. 4단계에서 브라우저 저장소에 저장하도록 바꾼다.
   const [progress, setProgress] = useState({});
 
   const level = levelId !== null ? findLevel(levelId) : null;
+
+  const openLevel = useCallback((id) => {
+    setProgress((prev) => ({ ...prev, [id]: { completed: false, stars: 0, ...prev[id], opened: true } }));
+    setLevelId(id);
+    setPlayKey((k) => k + 1);
+    setScreen('play');
+  }, []);
 
   const handleProgress = useCallback((id, p) => {
     setProgress((prev) => {
       const old = prev[id];
       // 별과 완공 여부는 더 좋은 기록만 남긴다.
       const merged = {
+        ...old,
         completed: Boolean(old?.completed || p.completed),
         stars: Math.max(old?.stars ?? 0, p.stars),
       };
@@ -29,14 +42,22 @@ export default function App() {
     });
   }, []);
 
+  // "다음 레벨로" 후보: 진행 상황이 바뀔 때(완공해서 다음 난이도가 열릴 때 등) 다시 고른다
+  const nextLevel = useMemo(
+    () => (level ? pickNextLevel(level, PLAYABLE, progress) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [level?.id, progress],
+  );
+
   if (screen === 'play' && level) {
-    // key를 레벨 번호로 주면, 레벨을 다시 열 때마다 새 판으로 시작한다.
     return (
       <PlayScreen
-        key={level.id}
+        key={`${level.id}-${playKey}`} // 레벨을 열 때마다 새 판으로 시작
         level={level}
         onExit={() => setScreen('mailbox')}
         onProgress={handleProgress}
+        nextLevel={nextLevel}
+        onNext={() => nextLevel && openLevel(nextLevel.id)}
       />
     );
   }
@@ -44,19 +65,18 @@ export default function App() {
   return (
     <div className={`front front-${screen}`}>
       {/* 메인 화면에서는 견본 건물이 1초마다 바뀌고, 우편함 화면에서는 작은 집 한 채가 흐릿하게 천천히 돈다 */}
-      <ShowcaseBackground cycling={screen === 'title'} still={1} />
+      <ShowcaseBackground cycling={screen === 'title'} still={0} />
       {screen === 'title' ? (
         <TitleScreen onStart={() => setScreen('mailbox')} />
       ) : (
         <Mailbox
+          levels={PLAYABLE}
+          broken={LEVELS.filter((e) => e.problems.length > 0).map((e) => e.level)}
           startOpen={mailboxOpened}
           progress={progress}
           onOpened={() => setMailboxOpened(true)}
           onBack={() => setScreen('title')}
-          onSelect={(id) => {
-            setLevelId(id);
-            setScreen('play');
-          }}
+          onSelect={openLevel}
         />
       )}
     </div>

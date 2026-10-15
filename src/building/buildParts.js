@@ -1,25 +1,18 @@
 import * as THREE from 'three';
 import { ROLE_LABELS } from '../game/labels.js';
 import { makeLabel } from './labels.js';
+import { ROOM_WIDTH } from './makeBlueprint.js';
 import { MATERIALS } from './materials.js';
 
 // ── 설계도 → 3D 부품 목록 ──
 // 부품마다 key(이름표)와 sig(상태)를 붙인다.
 // 렌더러는 key가 같고 sig도 같은 부품은 그대로 두고, 새로 생기거나 바뀐 부품만 다시 만든다.
-// → 카드 하나를 바꿔도 건물 전체가 다시 튀어나오지 않고, 바뀐 부분만 애니메이션된다.
 // 주의: 부품의 위치나 모양을 바꾸는 값은 모두 key 또는 sig에 넣어야 한다.
 //       (빠뜨리면 이전 모양이 그대로 남는다. 예: 메인 화면 깃발이 떠 있던 문제)
+// 부품의 delay(초)는 등장 애니메이션을 그만큼 늦춘다 (완공 장식을 마지막에 등장시키기 위해).
 
-// 크기 규칙 (모든 레벨 공통)
-export const LAYOUT = {
-  W: 4, // 가로
-  D: 3, // 세로
-  H: 2.2, // 층 높이
-  SLAB: 0.25, // 층 사이 바닥 두께
-  BASE: 0.3, // 기초 높이
-};
-const { W, D, H, SLAB, BASE } = LAYOUT;
-
+export const LAYOUT = { D: 3, H: 2.2, SLAB: 0.25, BASE: 0.3 };
+const { D, H, SLAB, BASE } = LAYOUT;
 const floorY = (f) => BASE + f * (H + SLAB);
 
 function box(w, h, d, material, x, y, z) {
@@ -31,178 +24,171 @@ function box(w, h, d, material, x, y, z) {
 
 function group(...children) {
   const g = new THREE.Group();
-  children.forEach((c) => g.add(c));
+  children.filter(Boolean).forEach((c) => g.add(c));
   return g;
 }
 
-// 자리 표지판 글자: 빈자리 "주어 ?", 카드가 놓이면 "주어 · the cat"
-function slotLabel(role, state, word) {
-  if (state === 'ghost' || !word) return `${ROLE_LABELS[role]} ?`;
-  return `${ROLE_LABELS[role]} · ${word}`;
-}
-
-// 표지판 모양: 고르고 있는 자리는 노랑, 빈자리는 파랑, 채워진 자리는 흰색
-const labelStyle = (state, active) => (active ? 'active' : state === 'ghost' ? 'ghost' : 'normal');
-
-// 자리 부품 재질: 고르고 있는 자리는 노랑(깜빡임), 빈자리는 반투명 유령
-const slotMaterial = (state, active, filledMaterial) =>
-  active ? MATERIALS.active : state === 'ghost' ? MATERIALS.ghost : filledMaterial;
-
-// 누를 수 있는 자리 부품에 자리 key를 붙여 둔다 → 렌더러가 클릭된 부품의 자리를 알아낸다
-function asSlot(obj, key) {
-  if (key) obj.userData.slotKey = key;
+// 누를 수 있는 부품에 공정 단위(방 ref, 계단 ref)를 붙여 둔다 → 렌더러가 눌린 부품을 알아낸다
+function asUnit(obj, ref) {
+  if (ref) obj.userData.slotKey = ref;
   return obj;
 }
 
-// 장식(수식어) 화분의 위치: 방 앞쪽에 한 줄로
-const modX = (i, count) => (count <= 1 ? -0.4 : -1.2 + (i * 2.4) / Math.max(count - 1, 1));
-// 방 칸(목적어·보어)의 위치
-const roomX = (i, count) => (count === 1 ? 0 : -0.8 + i * 1.6);
+const ROLE_MATERIAL = { S: 'pillarS', V: 'pillarV', O: 'roomO', C: 'roomC', M: 'furniture' };
+const TENSE_MATERIAL = { present: 'tensePresent', past: 'tensePast', ing: 'tenseIng' };
 
-// ── 부품 만들기 ──
-
-function foundation() {
-  return box(W + 0.6, BASE, D + 0.6, MATERIALS.foundation, 0, BASE / 2, 0);
-}
-
-function slab(f, state) {
-  const mat = state === 'ghost' ? MATERIALS.ghost : MATERIALS.slab;
-  return box(W + 0.4, SLAB, D + 0.4, mat, 0, floorY(f) - SLAB / 2, 0);
-}
-
-function pillars(f, role, state, active, word) {
-  const x = role === 'S' ? -W / 2 : W / 2;
-  const mat = slotMaterial(state, active, MATERIALS[`pillar${role}`]);
-  const y = floorY(f) + H / 2;
-  const label = makeLabel(slotLabel(role, state, word), labelStyle(state, active), 0.9);
-  label.position.set(x, floorY(f) + H * 0.55, D / 2 + 0.55);
-  // 고르는 중인 기둥은 조금 굵게 해서 눈에 띄게
-  const t = active ? 0.45 : 0.35;
-  return asSlot(group(box(t, H, t, mat, x, y, -D / 2), box(t, H, t, mat, x, y, D / 2), label), `${f}-${role}`);
-}
-
-// 벽: 앞쪽은 열어 두는 "인형의 집" 방식 → 방 안의 칸과 가구가 보인다.
-function walls(f) {
-  const y = floorY(f) + H / 2;
-  const t = 0.14;
-  const g = group(
-    box(W, H, t, MATERIALS.wall, 0, y, -D / 2),
-    box(t, H, D, MATERIALS.wall, -W / 2, y, 0),
-    box(t, H, D, MATERIALS.wall, W / 2, y, 0),
-  );
-  // 옆벽 창문
-  [-W / 2 - 0.08, W / 2 + 0.08].forEach((x) => {
-    g.add(box(0.05, 0.6, 0.8, MATERIALS.window, x, y + 0.2, 0));
+// 방의 x 위치 (층의 가운데를 0으로)
+function roomLayout(floor) {
+  let x = -floor.width / 2;
+  return floor.rooms.map((room) => {
+    const w = ROOM_WIDTH[room.kind];
+    const cx = x + w / 2;
+    x += w;
+    return { room, cx, w };
   });
-  // 뒷벽 창문
-  g.add(box(0.8, 0.6, 0.05, MATERIALS.window, 0, y + 0.25, -D / 2 + 0.09));
-  return g;
 }
 
-// 목적어·보어 칸: 방 안쪽 뒤편에 놓이는 상자
-function roomSlot(f, room, i, count, active, word) {
-  const x = roomX(i, count);
-  const mat = slotMaterial(room.state, active, MATERIALS[`room${room.role}`]);
-  const label = makeLabel(slotLabel(room.role, room.state, word), labelStyle(room.state, active), 0.8);
-  label.position.set(x, floorY(f) + 1.35, -D / 2 + 0.6);
-  return asSlot(group(box(1.3, 0.9, 0.8, mat, x, floorY(f) + 0.45, -D / 2 + 0.6), label), room.key);
+// 방 이름표: 짓기 전 "주어 ?", 짓는 중·다 지은 뒤 "주어 · the cat"
+function roomLabel(room) {
+  const role = ROLE_LABELS[room.role];
+  if (room.warn) return [`! ${role} 확인`, 'warn'];
+  if (room.state === 'ghost') return [`${role} ?`, room.active ? 'active' : 'ghost'];
+  return [room.text ? `${role} · ${room.text}` : role, room.active ? 'active' : 'normal'];
 }
 
-// 수식어 장식: 방 안의 화분. 자리(key)가 있으면 빈자리도 유령으로 보여 주고 누를 수 있다.
-function furniture(f, i, count, { key = null, state = 'filled', active = false, word, labels = false } = {}) {
-  const x = modX(i, count);
-  const z = 0.45;
-  const pot = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.18, 0.14, 0.3, 6),
-    slotMaterial(state, active, MATERIALS.stairs),
+// 방의 뼈대: 바닥판 + 뒷벽 + 오른쪽 칸막이 벽(성분과 성분의 경계) + 주어·동사 방은 앞쪽 기둥
+function roomShell(f, { room, cx, w }) {
+  const y = floorY(f);
+  const ghost = room.state === 'ghost';
+  const floorMat = room.active ? MATERIALS.active : ghost ? MATERIALS.ghost : MATERIALS[ROLE_MATERIAL[room.role]];
+  const wallMat = ghost ? MATERIALS.ghost : MATERIALS.wall;
+  const g = group(
+    box(w - 0.06, 0.08, D, floorMat, cx, y + 0.04, 0),
+    box(w, H, 0.14, wallMat, cx, y + H / 2, -D / 2),
   );
-  pot.position.set(x, floorY(f) + 0.15, z);
-  const leaves = new THREE.Mesh(
-    new THREE.IcosahedronGeometry(active ? 0.34 : 0.28, 0),
-    slotMaterial(state, active, MATERIALS.furniture),
-  );
-  leaves.position.set(x, floorY(f) + 0.5, z);
-  const g = group(pot, leaves);
-  if (labels) {
-    const label = makeLabel(slotLabel('M', state, word), labelStyle(state, active), 0.75);
-    label.position.set(x, floorY(f) + 0.95, z + 0.4);
-    g.add(label);
+  // 칸막이 벽 (마지막 방이면 바깥벽)
+  g.add(box(0.12, H, D, wallMat, cx + w / 2, y + H / 2, 0));
+  if (!ghost) g.add(box(0.7, 0.5, 0.05, MATERIALS.window, cx, y + H * 0.62, -D / 2 + 0.09));
+  // 주어·동사 방: 문장의 뼈대라 앞쪽에 굵은 기둥
+  if (room.role === 'S' || room.role === 'V') {
+    const mat = ghost ? MATERIALS.ghost : MATERIALS[ROLE_MATERIAL[room.role]];
+    g.add(box(0.32, H, 0.32, mat, cx - w / 2 + 0.2, y + H / 2, D / 2 - 0.2));
+    g.add(box(0.32, H, 0.32, mat, cx + w / 2 - 0.2, y + H / 2, D / 2 - 0.2));
   }
-  return asSlot(g, key);
+  return asUnit(g, room.ref);
 }
 
-function roof(f, isTop) {
+// 가구: 고른 단어. 명사가 복수면 2개. 동사는 기둥 모양이고 재질이 시제를 나타낸다.
+function furniture(f, { room, cx }) {
+  const y = floorY(f) + (room.aux ? 0.3 : 0.08);
+  const g = new THREE.Group();
+  if (room.role === 'V') {
+    const mat = MATERIALS[TENSE_MATERIAL[room.tense] ?? 'tensePresent'];
+    const col = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.5, 1.3, 7), mat);
+    col.position.set(cx, y + 0.65, -0.2);
+    g.add(col);
+  } else if (room.wordPos === 'adj' || room.wordPos === 'adv') {
+    // 형용사·부사: 스탠드 조명
+    g.add(box(0.1, 1.1, 0.1, MATERIALS.trunk, cx, y + 0.55, -0.2));
+    const shade = new THREE.Mesh(new THREE.ConeGeometry(0.38, 0.45, 6), MATERIALS[ROLE_MATERIAL[room.role]]);
+    shade.position.set(cx, y + 1.2, -0.2);
+    g.add(shade);
+  } else {
+    const mat = MATERIALS[ROLE_MATERIAL[room.role]];
+    const xs = room.plural ? [cx - 0.42, cx + 0.42] : [cx];
+    for (const x of xs) g.add(box(0.7, 0.75, 0.7, mat, x, y + 0.38, -0.2));
+  }
+  return asUnit(g, room.ref);
+}
+
+// 받침대: be동사
+function platform(f, { room, cx }) {
+  return asUnit(box(1.3, 0.22, 1.3, MATERIALS.stairs, cx, floorY(f) + 0.19, -0.2), room.ref);
+}
+
+// 카펫: 명사를 꾸미는 형용사
+function rug(f, { room, cx, w }) {
+  return asUnit(box(w - 0.6, 0.03, 1.5, MATERIALS.rug, cx, floorY(f) + 0.1, 0.1), room.ref);
+}
+
+// 문패: 관사·한정사 (방 앞 위쪽 작은 판)
+function plate(f, { room, cx }) {
+  return asUnit(box(0.7, 0.28, 0.06, MATERIALS.flag, cx, floorY(f) + H - 0.3, D / 2 + 0.02), room.ref);
+}
+
+// 출입문: 전치사 (방 앞쪽 문틀)
+function door(f, { room, cx, w }) {
+  const y = floorY(f);
+  const x = cx - w / 2 + 0.55;
+  return asUnit(
+    group(
+      box(0.1, 1.5, 0.1, MATERIALS.door, x - 0.35, y + 0.75, D / 2 - 0.05),
+      box(0.1, 1.5, 0.1, MATERIALS.door, x + 0.35, y + 0.75, D / 2 - 0.05),
+      box(0.8, 0.12, 0.12, MATERIALS.door, x, y + 1.5, D / 2 - 0.05),
+    ),
+    room.ref,
+  );
+}
+
+function label(f, { room, cx }) {
+  const [text, style] = roomLabel(room);
+  const s = makeLabel(text, style, 0.8);
+  s.position.set(cx, floorY(f) + H + 0.35, D / 2 + 0.3);
+  return asUnit(s, room.ref);
+}
+
+function slab(f, width) {
+  return box(width + 0.3, SLAB, D + 0.3, MATERIALS.slab, 0, floorY(f) - SLAB / 2, 0);
+}
+
+function roof(f, width, isTop) {
   const top = floorY(f) + H;
   if (isTop) {
-    // 네 면짜리 원뿔을 45도 돌리면 각진 지붕이 된다.
-    const cone = new THREE.Mesh(new THREE.ConeGeometry(1, 1, 4), MATERIALS.roof);
-    cone.rotation.y = Math.PI / 4;
-    cone.scale.set((W + 1) * 0.72, 1.6, (D + 1) * 0.72);
-    cone.position.set(0, top + 0.8, 0);
-    return cone;
+    // 박공지붕: 세 면짜리 기둥(삼각기둥)을 눕혀 건물 가로 길이만큼 늘인다. → 방이 많아져도 지붕 모양이 자연스럽다
+    // (z축으로 90° 돌려 축을 가로로 눕히고, x축으로 −90° 돌려 삼각형 꼭짓점을 위로)
+    const prism = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1, 3), MATERIALS.roof);
+    prism.rotation.set(-Math.PI / 2, 0, Math.PI / 2);
+    // 크기: 앞뒤 폭 = 건물 깊이 + 1, 길이 = 건물 가로 + 0.8, 높이 1.6 (꼭대기 = 지붕 시작 + 1.6)
+    prism.scale.set((D + 1) / Math.sqrt(3), width + 0.8, 1.6 / 1.5);
+    prism.position.set(0, top + 0.8 / 1.5, 0);
+    return prism;
   }
   // 위층이 있으면 앞쪽에 처마 모양의 작은 지붕
-  const eave = box(W + 0.8, 0.12, 0.8, MATERIALS.roof, 0, top + 0.02, D / 2 + 0.3);
+  const eave = box(width + 0.6, 0.12, 0.8, MATERIALS.roof, 0, top + 0.02, D / 2 + 0.3);
   eave.rotation.x = 0.35;
   return eave;
 }
 
 // 접속사 계단: 건물 오른쪽 바깥에서 아래층과 위층을 잇는다.
-function stairs(st, labels) {
-  const active = Boolean(st.active);
-  const mat = slotMaterial(st.state, active, MATERIALS.stairs);
+function stairs(st, x, labels) {
+  const mat = st.active ? MATERIALS.active : st.state === 'ghost' ? MATERIALS.ghost : MATERIALS.stairs;
   const steps = 8;
   const rise = (H + SLAB) / steps;
   const run = D / steps;
-  const x = W / 2 + 0.75;
   const g = new THREE.Group();
   for (let k = 0; k < steps; k += 1) {
-    g.add(box(active ? 1.1 : 0.9, 0.12, run + 0.02, mat, x, floorY(st.from) + (k + 1) * rise - 0.06, D / 2 - (k + 0.5) * run));
+    g.add(box(0.9, 0.12, run + 0.02, mat, x, floorY(st.from) + (k + 1) * rise - 0.06, D / 2 - (k + 0.5) * run));
   }
   if (labels) {
-    const label = makeLabel(slotLabel('CONJ', st.state, st.word), labelStyle(st.state, active), 0.8);
-    label.position.set(x + 0.4, floorY(st.from) + (H + SLAB) / 2, 0);
-    g.add(label);
+    const text = st.warn ? '! 접속사 확인' : st.word ? `접속사 · ${st.word}` : '접속사 ?';
+    const s = makeLabel(text, st.warn ? 'warn' : st.active ? 'active' : st.word ? 'normal' : 'ghost', 0.8);
+    s.position.set(x + 0.3, floorY(st.from) + (H + SLAB) / 2, 0.4);
+    g.add(s);
   }
-  return asSlot(g, st.key);
+  return asUnit(g, st.ref);
 }
 
-// 경고 표지판 위치: 가리키는 자리 부품 바로 위
-function warningPosition(slot, bp) {
-  if (slot.startsWith('L')) {
-    const st = bp.stairs.find((s) => s.key === slot);
-    return [W / 2 + 1.1, floorY(st?.from ?? 0) + H + 0.2, 0];
-  }
-  const f = Number(slot.split('-')[0]);
-  const floor = bp.floors[f];
-  const role = slot.split('-')[1];
-  if (role === 'S' || role === 'V') return [role === 'S' ? -W / 2 : W / 2, floorY(f) + H + 0.35, D / 2 + 0.55];
-  if (role === 'O' || role === 'C') {
-    const i = Math.max(floor.rooms.findIndex((r) => r.key === slot), 0);
-    return [roomX(i, floor.rooms.length), floorY(f) + 1.9, -D / 2 + 0.6];
-  }
-  const mods = floor.mods ?? [];
-  const i = Math.max(mods.findIndex((m) => m.key === slot), 0);
-  return [modX(i, mods.length), floorY(f) + 1.45, 0.85];
+function foundation(width) {
+  return box(width + 0.8, BASE, D + 0.8, MATERIALS.foundation, 0, BASE / 2, 0);
 }
 
-function warning(w, bp) {
-  const role = w.slot.startsWith('L') ? 'CONJ' : w.slot.split('-')[1];
-  const name = ROLE_LABELS[role] ?? '문장';
-  const text = w.kind === 'missing' ? `${name} 없음` : `! ${name} 확인`;
-  const label = makeLabel(text, 'warn', 1);
-  label.position.set(...warningPosition(w.slot, bp));
-  return label;
-}
-
-function fence() {
+function fence(width) {
   const g = new THREE.Group();
-  const z = D / 2 + 1.6;
-  for (let i = -3; i <= 3; i += 1) {
-    g.add(box(0.12, 0.55, 0.12, MATERIALS.fence, i * 0.75, 0.28, z));
-  }
-  g.add(box(4.6, 0.08, 0.06, MATERIALS.fence, 0, 0.42, z));
-  g.add(box(4.6, 0.08, 0.06, MATERIALS.fence, 0, 0.2, z));
+  const z = D / 2 + 1.5;
+  const half = width / 2 + 0.6;
+  for (let x = -half; x <= half + 0.01; x += 0.75) g.add(box(0.12, 0.55, 0.12, MATERIALS.fence, x, 0.28, z));
+  g.add(box(half * 2, 0.08, 0.06, MATERIALS.fence, 0, 0.42, z));
+  g.add(box(half * 2, 0.08, 0.06, MATERIALS.fence, 0, 0.2, z));
   return g;
 }
 
@@ -213,12 +199,12 @@ function flag(topY) {
   return group(pole, cloth);
 }
 
-function tree() {
+function tree(width) {
+  const x = -width / 2 - 1.3;
   const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.15, 0.8, 6), MATERIALS.trunk);
-  // 주어 기둥을 가리지 않도록 건물 왼쪽 뒤편에 둔다.
-  trunk.position.set(-W / 2 - 1.2, 0.4, -D / 2 - 1.2);
+  trunk.position.set(x, 0.4, -D / 2 - 0.8);
   const leaves = new THREE.Mesh(new THREE.IcosahedronGeometry(0.75, 0), MATERIALS.leaves);
-  leaves.position.set(-W / 2 - 1.2, 1.3, -D / 2 - 1.2);
+  leaves.position.set(x, 1.3, -D / 2 - 0.8);
   return group(trunk, leaves);
 }
 
@@ -237,69 +223,59 @@ function withoutLabels(obj) {
 }
 
 // ── 설계도 전체 → 부품 목록 ──
-// options.labels: false면 "주어", "동사 ?" 같은 글자 표지판을 붙이지 않는다.
+// options.labels: false면 글자 표지판을 붙이지 않는다.
 export function buildParts(bp, { labels = true } = {}) {
   const parts = [];
-  const add = (key, sig, create) =>
-    parts.push({ key, sig: String(sig), create: labels ? create : () => withoutLabels(create()) });
+  const add = (key, sig, create, delay = 0) =>
+    parts.push({ key, sig: String(sig), delay, create: labels ? create : () => withoutLabels(create()) });
 
-  add('foundation', 1, foundation);
-  add('tree', 1, tree);
+  const width = bp.maxWidth;
+  add('foundation', width, () => foundation(width));
 
-  for (const fl of bp.floors) {
-    const f = fl.index;
-    if (f > 0) add(`f${f}-slab`, fl.hasCards ? 'filled' : 'ghost', () => slab(f, fl.hasCards ? 'filled' : 'ghost'));
-    const words = fl.words ?? {};
-    for (const role of ['S', 'V']) {
-      const key = `${f}-${role}`;
-      const state = fl.pillars[role];
-      const active = fl.active === key;
-      add(`f${f}-${role}`, `${state}-${active}-${words[key] ?? ''}`, () => pillars(f, role, state, active, words[key]));
-    }
-    fl.rooms.forEach((room, i) => {
-      const active = Boolean(room.key) && fl.active === room.key;
-      add(`f${f}-room-${room.role}`, `${room.state}-${i}-${fl.rooms.length}-${active}-${words[room.key] ?? ''}`, () =>
-        roomSlot(f, room, i, fl.rooms.length, active, words[room.key]));
+  for (const floor of bp.floors) {
+    const f = floor.index;
+    if (f > 0) add(`f${f}-slab`, floor.width, () => slab(f, floor.width));
+    const layout = roomLayout(floor);
+    layout.forEach((slot) => {
+      const { room } = slot;
+      const key = `room-${room.ref}`;
+      const where = `${slot.cx.toFixed(2)}`; // 방 위치가 바뀌면 새로 만든다
+      add(`${key}-shell`, `${room.state}-${room.active}-${where}`, () => roomShell(f, slot));
+      if (room.word) add(`${key}-furn`, `${room.word}-${room.plural}-${room.tense}-${room.wordPos}-${Boolean(room.aux)}-${where}`, () => furniture(f, slot));
+      if (room.aux) add(`${key}-aux`, where, () => platform(f, slot));
+      if (room.adj) add(`${key}-rug`, `${room.adj}-${where}`, () => rug(f, slot));
+      if (room.det) add(`${key}-det`, `${room.det}-${where}`, () => plate(f, slot));
+      if (room.prep) add(`${key}-prep`, `${room.prep}-${where}`, () => door(f, slot));
+      if (labels) {
+        const [text, style] = roomLabel(room);
+        add(`${key}-label`, `${text}-${style}-${where}`, () => label(f, slot));
+      }
     });
-    if (fl.coreComplete) add(`f${f}-walls`, 1, () => walls(f));
-    // 장식: 게임에서는 자리(mods)마다, 메인 화면 견본에서는 개수(modifiers)만큼
-    const mods = fl.mods ?? Array.from({ length: fl.modifiers ?? 0 }, () => ({ key: null, state: 'filled' }));
-    mods.forEach((m, i) => {
-      const active = Boolean(m.key) && fl.active === m.key;
-      const word = words[m.key];
-      add(`f${f}-furn-${i}`, `${m.state}-${i}-${mods.length}-${active}-${word ?? ''}`, () =>
-        furniture(f, i, mods.length, { key: m.key, state: m.state, active, word, labels: Boolean(m.key) }));
-    });
-    if (fl.roomComplete) add(`f${f}-roof`, fl.isTop ? 'top' : 'eave', () => roof(f, fl.isTop));
+    if (floor.roofed) add(`f${f}-roof`, `${floor.isTop}-${floor.width}`, () => roof(f, floor.width, floor.isTop));
   }
 
+  const stairX = width / 2 + 0.75;
   for (const st of bp.stairs) {
-    add(`stairs-${st.from}`, `${st.state}-${Boolean(st.active)}-${st.word ?? ''}`, () => stairs(st, Boolean(st.key)));
+    add(`stairs-${st.ref}`, `${st.state}-${st.active}-${st.word}-${st.warn}-${stairX}`, () => stairs(st, stairX, labels));
   }
 
-  for (const w of bp.warnings) {
-    // 경고 위치는 방 칸·장식 배치에 따라 달라지므로 그 배치도 sig에 넣는다
-    const f = w.slot.startsWith('L') ? null : Number(w.slot.split('-')[0]);
-    const layout = f === null ? '' : `${bp.floors[f].rooms.map((r) => r.key).join()}|${(bp.floors[f].mods ?? []).length}`;
-    add(`warn-${w.slot}`, `${w.kind}-${layout}`, () => warning(w, bp));
-  }
-
+  // 완공 장식: 깃발, 울타리, 나무는 건물이 다 지어진 다음에 마지막으로 등장한다
   const n = bp.floors.length;
-  const top = floorY(n - 1) + H;
-  const topFloorRoofed = bp.floors[n - 1].roomComplete;
-  if (bp.conditionsMet) add('fence', 1, fence);
-  // 깃발 높이는 층수에 따라 달라지므로 sig에 층수를 넣는다.
-  // (넣지 않으면 메인 화면에서 집이 바뀔 때 깃발이 이전 집 높이에 그대로 남아 떠 있게 된다)
-  if (bp.completed) {
-    add('flag', `${n}-${topFloorRoofed ? 'roof' : 'flat'}`, () => flag(topFloorRoofed ? top + 1.45 : top));
+  const topFloor = bp.floors[n - 1];
+  const top = n > 0 ? floorY(n - 1) + H : BASE;
+  if (bp.completed && topFloor) {
+    const finale = 0.25;
+    add('flag', `${n}-${topFloor.roofed}-${topFloor.width}`, () => flag(topFloor.roofed ? top + 1.45 : top), finale);
+    add('fence', width, () => fence(width), finale + 0.1);
+    add('tree', width, () => tree(width), finale + 0.2);
   }
 
   // 카메라가 건물 전체를 담을 수 있도록 대략적인 크기를 알려 준다.
   const height = top + 1.8;
+  const spanX = width + 3.5;
   const bounds = {
-    center: new THREE.Vector3(0.2, height / 2, 0.4),
-    radius: 0.5 * Math.sqrt(7 ** 2 + height ** 2 + 5 ** 2),
+    center: new THREE.Vector3(0, height / 2, 0.4),
+    radius: 0.5 * Math.sqrt(spanX ** 2 + height ** 2 + 5 ** 2),
   };
-
   return { parts, bounds };
 }
