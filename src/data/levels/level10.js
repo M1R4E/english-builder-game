@@ -77,6 +77,22 @@ export default {
     ],
   },
 
+  // 생각해 보기(자기 설명): 완공 후 짧은 질문. 점수와 관계없고 기록에만 남는다.
+  selfExplain: {
+    question: 'smells 뒤에 sweetly가 아니라 sweet를 쓴 이유는 무엇일까요?',
+    options: [
+      { text: 'smell(~한 냄새가 나다) 뒤에는 상태를 설명하는 형용사가 오기 때문에', correct: true },
+      { text: '문장이 길어서 짧은 단어를 써서' },
+      { text: 'house가 한 채라서' },
+    ],
+    explain: 'smell, look, feel처럼 "~하게 느껴지다"는 동사 뒤에는 형용사 보어가 와요.',
+  },
+  // 비교해 보기(대조 학습): 비슷하지만 뜻이나 문법이 다른 문장. mine: 이번 정답
+  contrast: [
+    { sentence: 'Our house always smells sweet.', meaning: '우리 집은 항상 달콤한 냄새가 난다.', mine: true },
+    { sentence: 'Our house always looks sweet.', meaning: '우리 집은 항상 사랑스러워 보인다.' },
+  ],
+
   hints: {
     steps: [
       '1층은 "할머니가 매일 아침 빵을 굽는다", 2층은 "우리 집은 항상 달콤한 냄새가 난다"예요. 두 층은 원인과 결과 관계예요.',

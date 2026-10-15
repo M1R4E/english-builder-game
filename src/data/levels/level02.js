@@ -63,6 +63,22 @@ export default {
     ],
   },
 
+  // 생각해 보기(자기 설명): 완공 후 짧은 질문. 점수와 관계없고 기록에만 남는다.
+  selfExplain: {
+    question: 'likes 뒤에 to를 쓰지 않은 이유는 무엇일까요?',
+    options: [
+      { text: 'like는 "무엇을"을 바로 뒤에 붙이는 동사라서', correct: true },
+      { text: 'ball이 짧은 단어라서' },
+      { text: '강아지가 한 마리라서' },
+    ],
+    explain: 'like(좋아하다)는 목적어를 바로 뒤에 써요. to는 "~으로" 같은 방향을 나타낼 때 써요.',
+  },
+  // 비교해 보기(대조 학습): 비슷하지만 뜻이나 문법이 다른 문장. mine: 이번 정답
+  contrast: [
+    { sentence: 'The dog likes the ball.', meaning: '그 강아지는 그 공을 좋아한다.', mine: true },
+    { sentence: 'The dog runs to the ball.', meaning: '그 강아지는 그 공 쪽으로 달려간다.' },
+  ],
+
   hints: {
     steps: [
       '"누가", "무엇을 하나", "무엇을"을 각각 찾아보세요. 세 가지가 주어 방, 동사 방, 목적어 방과 짝을 이뤄요.',

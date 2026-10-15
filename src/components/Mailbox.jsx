@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { isNew, isUnlocked } from '../game/progress.js';
 import IconButton from './IconButton.jsx';
-import { IconHome } from './Icons.jsx';
+import { formatWon, toWon } from '../game/money.js';
+import { IconGear, IconHome } from './Icons.jsx';
 import Stars from './Stars.jsx';
 
 const OPEN_MS = 550; // 우편함 문이 열리는 시간
@@ -15,7 +16,18 @@ const reduceMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)
 //  주문서를 누르면 우편함 밖으로 꺼내는 연출 뒤에 그 레벨의 주문서 화면으로 넘어간다.
 //  아직 해금되지 않은 난이도의 주문서는 보이지 않는다. 새로 도착한 주문서에는 New! 표시.
 //  게임에서 돌아올 때(startOpen)는 열리는 연출 없이 바로 열린 우편함을 보여 준다.
-export default function Mailbox({ levels, broken = [], startOpen, progress, onOpened, onSelect, onBack }) {
+export default function Mailbox({
+  levels,
+  broken = [],
+  startOpen,
+  progress,
+  wallet = 0,
+  recommendation = null,
+  onOpened,
+  onSelect,
+  onBack,
+  onSettings,
+}) {
   const [state, setState] = useState(startOpen ? 'open' : 'closed'); // closed → opening → open
   const [picked, setPicked] = useState(null);
   const timer = useRef(null);
@@ -42,6 +54,12 @@ export default function Mailbox({ levels, broken = [], startOpen, progress, onOp
   return (
     <main className="mailbox-screen">
       <IconButton icon={IconHome} label="메인 화면으로" onClick={onBack} className="back-to-title" />
+      {onSettings && <IconButton icon={IconGear} label="설정" onClick={onSettings} className="mailbox-settings" />}
+      {/* 지갑: 레벨마다 가장 많이 받은 최종 공사 대금의 합 */}
+      <p className="wallet" aria-label={`지갑 ${formatWon(toWon(wallet))}`}>
+        <span className="wallet-label">지갑</span>
+        <b>{formatWon(toWon(wallet))}</b>
+      </p>
 
       {state !== 'open' ? (
         <div className="mailbox-closed-wrap">
@@ -72,10 +90,19 @@ export default function Mailbox({ levels, broken = [], startOpen, progress, onOp
             <span className="mailbox-open-title">우편함</span>
             <span className="muted small">주문서 {visible.length}통</span>
           </header>
+          {recommendation && (
+            <p className="recommend-note small">
+              최근 {recommendation.count}개 평균 {formatWon(toWon(recommendation.average))} ·{" "}
+              {recommendation.mode === 'up' && '잘하고 있어요! 더 어려운 주문서에 도전해 보세요.'}
+              {recommendation.mode === 'keep' && '지금 난이도의 주문서를 하나 더 지어 보세요.'}
+              {recommendation.mode === 'down' && '쉬운 주문서부터 다시 지어 보거나, 설정에서 "쉬움"을 골라 보세요.'}
+            </p>
+          )}
           <ul className="ticket-list">
             {visible.map((level) => {
               const p = progress[level.id];
               const fresh = isNew(level, levels, progress);
+              const recommended = recommendation?.levelId === level.id;
               const status = p?.completed ? '완공' : p?.opened ? '공사 중' : '새 주문';
               const tilt = ((level.id * 7) % 5) - 2; // 주문서마다 살짝 다르게 기울이기
               return (
@@ -86,11 +113,16 @@ export default function Mailbox({ levels, broken = [], startOpen, progress, onOp
                     style={{ '--tilt': `${tilt * 0.8}deg` }}
                     disabled={picked !== null}
                     onClick={() => pick(level.id)}
-                    aria-label={`주문서 ${level.id}번 ${level.title}, 난이도 ${level.difficulty}, ${status}${fresh ? ', 새로 도착' : ''}`}
+                    aria-label={`주문서 ${level.id}번 ${level.title}, 난이도 ${level.difficulty}, ${status}${fresh ? ', 새로 도착' : ''}${recommended ? ', 추천' : ''}`}
                   >
                     {fresh && (
                       <span className="new-badge" aria-hidden="true">
                         New!
+                      </span>
+                    )}
+                    {recommended && (
+                      <span className="recommend-badge" aria-hidden="true">
+                        추천
                       </span>
                     )}
                     <span className="ticket-no">No. {String(level.id).padStart(4, '0')}</span>

@@ -68,6 +68,22 @@ export default {
     ],
   },
 
+  // 생각해 보기(자기 설명): 완공 후 짧은 질문. 점수와 관계없고 기록에만 남는다.
+  selfExplain: {
+    question: '계단에 when(또는 after)을 놓은 이유는 무엇일까요?',
+    options: [
+      { text: '비가 그친 뒤에 아이들이 놀았기 때문에', correct: true },
+      { text: '아이들이 논 다음에 비가 그쳤기 때문에' },
+      { text: '비 때문에 아이들이 놀았기 때문에' },
+    ],
+    explain: 'when·after는 "~할 때, ~한 후에", before는 "~하기 전에"를 나타내요. 두 사건의 순서를 생각해 보세요.',
+  },
+  // 비교해 보기(대조 학습): 비슷하지만 뜻이나 문법이 다른 문장. mine: 이번 정답
+  contrast: [
+    { sentence: 'When the rain stopped, the children played outside.', meaning: '비가 그쳤을 때, 아이들은 밖에서 놀았다.', mine: true },
+    { sentence: 'Before the rain stopped, the children played outside.', meaning: '비가 그치기 전에, 아이들은 밖에서 놀았다. (순서가 반대)' },
+  ],
+
   hints: {
     steps: [
       '두 사건 중 무엇이 중심 이야기이고, 무엇이 "때"를 알려 주나요? 중심 이야기(아이들이 놂)가 1층, "때"(비가 그침)가 2층이에요.',

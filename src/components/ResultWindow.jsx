@@ -3,6 +3,7 @@ import { CATEGORY_LABELS, ESTIMATE_PENALTY_RATE, ESTIMATE_TOLERANCE, FIREWORKS_T
 import { sentenceText } from '../game/structure.js';
 import { formatWon, MAX_WON, toWon, wonText } from '../game/money.js';
 import Fireworks from './Fireworks.jsx';
+import LearningExtras from './LearningExtras.jsx';
 import Window from './Window.jsx';
 
 // 점검 결과의 상태 표시: 색과 함께 글자 배지로 구분한다 (색만으로 구분하지 않기).
@@ -54,7 +55,20 @@ function useCountUp(target, active, duration) {
 //  → 5 (잠깐 쉼) → 6 점검 결과(빠르게 페이드 인) → 7 내 견적과 비교하기 → 8 최종 공사 대금 → 9 버튼
 // X 또는 확인 버튼으로 닫으면 건물 고치기로 돌아간다. "바로 보기"를 누르면 연출을 건너뛴다.
 // 버튼: 우편함으로(바로 레벨 선택 화면) / 다음 레벨로(있을 때) / 확인(하고 고치기)
-export default function ResultWindow({ level, attempt, reward, attemptCount, onEdit, onExit, nextLevel, onNext }) {
+export default function ResultWindow({
+  level,
+  attempt,
+  reward,
+  attemptCount,
+  onEdit,
+  onExit,
+  nextLevel,
+  onNext,
+  viewedAnswer,
+  onViewAnswer,
+  selfExplain,
+  onSelfExplain,
+}) {
   const { result } = attempt;
   const sentence = sentenceText(level, attempt.choices);
 
@@ -227,6 +241,19 @@ export default function ResultWindow({ level, attempt, reward, attemptCount, onE
           점수(청구 금액)와 별 개수에는 영향을 주지 않아요.
         </p>
       </section>
+
+      {stage >= LAST && (
+        <LearningExtras
+          level={level}
+          completed={reward.completed}
+          perfect={result.perfect}
+          attemptCount={attemptCount}
+          selfExplain={selfExplain}
+          onSelfExplain={onSelfExplain}
+          viewedAnswer={viewedAnswer}
+          onViewAnswer={onViewAnswer}
+        />
+      )}
 
       {stage < LAST ? (
         <div className="window-actions">

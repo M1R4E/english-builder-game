@@ -84,6 +84,23 @@ export default {
     ],
   },
 
+  // 생각해 보기(자기 설명): 완공 후 짧은 질문. 점수와 관계없고 기록에만 남는다.
+  selfExplain: {
+    question: '두 절을 but으로 이은 이유는 무엇일까요?',
+    options: [
+      { text: '피곤했는데도 일을 끝냈다는 반대의 흐름이라서', correct: true },
+      { text: '피곤해서 그 결과로 일을 끝냈기 때문에' },
+      { text: '일을 끝낸 것이 피곤한 이유라서' },
+    ],
+    explain: 'but은 앞뒤 내용이 반대될 때, so는 결과, because는 이유를 이을 때 써요.',
+  },
+  // 비교해 보기(대조 학습): 비슷하지만 뜻이나 문법이 다른 문장. mine: 이번 정답
+  contrast: [
+    { sentence: 'The carpenter was tired, but he finished the work.', meaning: '목수는 피곤했지만, 일을 끝냈다. (반대)', mine: true },
+    { sentence: 'The carpenter was tired, so he went to bed.', meaning: '목수는 피곤해서, 잠자리에 들었다. (결과)' },
+    { sentence: 'The carpenter was tired because he worked hard.', meaning: '목수는 열심히 일했기 때문에 피곤했다. (이유)' },
+  ],
+
   hints: {
     steps: [
       '1층에는 "목수가 피곤했다", 2층에는 "그가 그 일을 끝냈다"가 들어가요. 두 이야기는 어떤 관계일까요?',

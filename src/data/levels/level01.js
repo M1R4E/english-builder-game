@@ -59,6 +59,23 @@ export default {
     ],
   },
 
+  // 생각해 보기(자기 설명): 완공 후 짧은 질문. 점수와 관계없고 기록에만 남는다.
+  selfExplain: {
+    question: '동사를 sleeps로 쓴 이유는 무엇일까요?',
+    options: [
+      { text: '주어가 고양이 한 마리이고, 평소의 일(현재)이라서', correct: true },
+      { text: '고양이가 어제 잤기 때문에' },
+      { text: '주어가 여러 마리라서' },
+    ],
+    explain: '주어가 3인칭 단수(한 마리)이고 현재 시제이면 일반동사 끝에 -s를 붙여요.',
+  },
+  // 비교해 보기(대조 학습): 비슷하지만 뜻이나 문법이 다른 문장. mine: 이번 정답
+  contrast: [
+    { sentence: 'The cat sleeps.', meaning: '그 고양이는 (평소에) 잔다.', mine: true },
+    { sentence: 'The cats sleep.', meaning: '그 고양이들은 (평소에) 잔다.' },
+    { sentence: 'The cat slept.', meaning: '그 고양이는 잤다. (지난 일)' },
+  ],
+
   hints: {
     steps: [
       '주문서에서 "누가"와 "무엇을 하나"를 찾아보세요. 문장 하나(주어 + 동사 한 묶음)는 층 하나예요.',

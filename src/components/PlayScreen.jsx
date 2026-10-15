@@ -4,7 +4,9 @@ import { makeBlueprint } from '../building/makeBlueprint.js';
 import { COMPLETE_THRESHOLD } from '../config.js';
 import { computeReward } from '../game/reward.js';
 import { scoreSentence } from '../game/scoring.js';
+import { buildRecord } from '../game/records.js';
 import { createSession, currentResult, currentStep, sessionReducer } from '../game/session.js';
+import { DEFAULT_SETTINGS } from '../game/storage.js';
 import { isComplete, sentenceText } from '../game/structure.js';
 import BuildingView from './BuildingView.jsx';
 import CardTray from './CardTray.jsx';
@@ -16,6 +18,7 @@ import OrderSheet from './OrderSheet.jsx';
 import OrderSlip from './OrderSlip.jsx';
 import ProgressBar from './ProgressBar.jsx';
 import ResultWindow from './ResultWindow.jsx';
+import SettingsWindow from './SettingsWindow.jsx';
 import Toast from './Toast.jsx';
 
 const DOCK_PEEK = 46; // 카드 판을 끝까지 내렸을 때 보이는 높이 (손잡이 부분)
@@ -72,9 +75,25 @@ function useDockDrag(dockHeight) {
 // 3D 건물이 화면 전체를 차지하고, 그 위에 상단 바·하단 카드 판·창(주문서, 힌트, 결과)이 겹쳐 뜬다.
 // 진행 순서: 주문서(예상 비용 → 수락 도장) → 공정 순서대로 짓기(층수 → 방 → 계단 → 위층) → 제출
 //          → (완공이면 완공 연출) → 점검 보고서 → (고쳐서 다시 제출 / 다음 레벨)
-export default function PlayScreen({ level, onExit, onProgress, nextLevel, onNext }) {
+export default function PlayScreen({
+  level,
+  playId,
+  settings = DEFAULT_SETTINGS,
+  onSettingsChange,
+  onExit,
+  onProgress,
+  onRecord,
+  nextLevel,
+  onNext,
+}) {
   const [state, dispatch] = useReducer(sessionReducer, level, createSession);
   const [orderOpen, setOrderOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [viewedAnswer, setViewedAnswer] = useState(false); // 정답 예시를 봤는지 (기록용, 감점 없음)
+  const [selfExplain, setSelfExplain] = useState(null); // 자기 설명 답 { choice, correct }
+  const easy = settings.difficulty === 'easy';
+  // 문법 단계의 짧은 설명: 쉬움은 항상, 보통은 초반 레벨만, 어려움은 숨김
+  const grammarGloss = easy || (settings.difficulty === 'normal' && Boolean(level.scaffold?.showRoles));
   const [hintOpen, setHintOpen] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
   const [celebrateKey, setCelebrateKey] = useState(0);
@@ -91,8 +110,8 @@ export default function PlayScreen({ level, onExit, onProgress, nextLevel, onNex
 
   // 공정 선택 → 설계도 → 3D 부품 목록
   const { parts, bounds } = useMemo(
-    () => buildParts(makeBlueprint(level, state.choices, shownResult, { activeUnit })),
-    [level, state.choices, shownResult, activeUnit],
+    () => buildParts(makeBlueprint(level, state.choices, shownResult, { activeUnit }), { prompts: easy }),
+    [level, state.choices, shownResult, activeUnit, easy],
   );
 
   const scores = state.attempts.map((a) => a.result.total);
@@ -100,8 +119,15 @@ export default function PlayScreen({ level, onExit, onProgress, nextLevel, onNex
   const lastAttempt = state.attempts[state.attempts.length - 1];
 
   useEffect(() => {
-    if (reward) onProgress(level.id, { completed: reward.completed, stars: reward.stars });
+    if (reward) onProgress(level.id, { completed: reward.completed, stars: reward.stars, finalPay: reward.finalPay });
   }, [reward, level.id, onProgress]);
+
+  // 학습 기록: 제출할 때마다, 정답 예시를 보거나 자기 설명에 답할 때마다 저장한다
+  useEffect(() => {
+    if (state.attempts.length === 0 || !onRecord) return;
+    onRecord(buildRecord(level, state, { playId, difficulty: settings.difficulty, viewedAnswer, selfExplain }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.attempts.length, viewedAnswer, selfExplain]);
 
   const say = (text) => setToast({ id: Date.now(), text });
   const endCelebration = useCallback(() => setCelebrating(false), []);
@@ -164,7 +190,7 @@ export default function PlayScreen({ level, onExit, onProgress, nextLevel, onNex
           <span className="hud-name">{level.title}</span>
         </div>
         <div className="hud-right">
-          <IconButton icon={IconGear} label="설정" disabled title="4단계에서 연결 예정" />
+          <IconButton icon={IconGear} label="설정" onClick={() => setSettingsOpen(true)} />
         </div>
       </header>
       {state.phase !== 'predict' && <OrderSlip onClick={() => setOrderOpen(true)} />}
@@ -202,7 +228,9 @@ export default function PlayScreen({ level, onExit, onProgress, nextLevel, onNex
             step={step}
             choices={state.choices}
             editing={Boolean(state.editStep)}
-            scaffold={Boolean(level.scaffold?.showRoles)}
+            grammarGloss={grammarGloss}
+            meanings={settings.showMeanings}
+            hideInvalid={easy}
             onChoose={choose}
             onCancelEdit={() => dispatch({ type: 'CANCEL_EDIT' })}
           />
@@ -234,6 +262,11 @@ export default function PlayScreen({ level, onExit, onProgress, nextLevel, onNex
           bottom={visibleDock + 12}
           onClose={() => setHintOpen(false)}
         />
+      )}
+
+      {/* 창: 설정 (게임 중에도 바꿀 수 있다) */}
+      {settingsOpen && (
+        <SettingsWindow settings={settings} onChange={onSettingsChange} onClose={() => setSettingsOpen(false)} />
       )}
 
       {/* 창: 주문서 (시작 전) */}
@@ -271,6 +304,10 @@ export default function PlayScreen({ level, onExit, onProgress, nextLevel, onNex
           attemptCount={state.attempts.length}
           onEdit={() => dispatch({ type: 'EDIT' })}
           onExit={onExit}
+          viewedAnswer={viewedAnswer}
+          onViewAnswer={() => setViewedAnswer(true)}
+          selfExplain={selfExplain}
+          onSelfExplain={setSelfExplain}
           nextLevel={nextLevel}
           onNext={onNext}
         />

@@ -3,9 +3,11 @@ import { partLabel, stepOptions } from '../game/structure.js';
 
 // 자재(카드) 판. 지금 공정 단계에서 고를 수 있는 것만 보여 준다.
 //  예) 주어 방 ① 가구(단어): cat, dog, bird …  → ② 개수: cat / cats → ③ 문패(관사): a / the / (없음)
-// 단어를 고르는 단계에서는 뜻을 보여 주지 않는다(의미를 스스로 판단).
-// 형태·관사처럼 문법을 고르는 단계의 짧은 설명(예: "과거", "그 (정해진 것)")은 초반 레벨(scaffold.showRoles)에서만 보여 준다.
-export default function CardTray({ step, choices, editing, onChoose, onCancelEdit, scaffold = false }) {
+// 설명 보이기 (설정·난이도에 따라)
+//  meanings    : 단어를 고르는 단계에서 한국어 뜻 (설정의 "단어 뜻 보기")
+//  grammarGloss: 형태·관사처럼 문법을 고르는 단계의 짧은 설명 (예: "과거", "그 (정해진 것)")
+//  hideInvalid : 틀린 모양의 자재(예: sleeped)를 미리 빼 둔다 (쉬움). 틀린 모양은 항상 틀리므로 빼도 정답이 사라지지 않는다.
+export default function CardTray({ step, choices, editing, onChoose, onCancelEdit, meanings = false, grammarGloss = false, hideInvalid = false }) {
   if (!step) {
     return (
       <div className="card-tray">
@@ -16,7 +18,9 @@ export default function CardTray({ step, choices, editing, onChoose, onCancelEdi
     );
   }
 
-  const options = stepOptions(step, choices);
+  const options = stepOptions(step, choices).filter(
+    (o) => !(hideInvalid && o.entry?.valid === false && o.value !== choices[step.key]),
+  );
   const current = choices[step.key];
   let title;
   if (step.kind === 'floors') {
@@ -34,7 +38,8 @@ export default function CardTray({ step, choices, editing, onChoose, onCancelEdi
       </>
     );
   }
-  const showGloss = step.kind === 'floors' || (scaffold && step.part !== 'word' && step.part !== 'adj');
+  const isWordStep = step.kind === 'link' || step.part === 'word' || step.part === 'adj';
+  const showGloss = step.kind === 'floors' || (isWordStep ? meanings : grammarGloss);
 
   return (
     <div className="card-tray" role="group" aria-label="고를 수 있는 자재">

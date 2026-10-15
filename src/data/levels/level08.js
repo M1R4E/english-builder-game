@@ -81,6 +81,22 @@ export default {
     ],
   },
 
+  // 생각해 보기(자기 설명): 완공 후 짧은 질문. 점수와 관계없고 기록에만 남는다.
+  selfExplain: {
+    question: 'always를 동사 앞에, at the library를 문장 끝에 둔 이유는 무엇일까요?',
+    options: [
+      { text: '빈도는 보통 일반동사 앞, 장소는 보통 문장 끝에 오기 때문에', correct: true },
+      { text: '짧은 단어가 항상 앞에 오기 때문에' },
+      { text: '아무 데나 놓아도 되기 때문에' },
+    ],
+    explain: '빈도부사(always, usually …)는 보통 일반동사 앞에, 장소를 나타내는 말은 보통 문장 끝에 와요.',
+  },
+  // 비교해 보기(대조 학습): 비슷하지만 뜻이나 문법이 다른 문장. mine: 이번 정답
+  contrast: [
+    { sentence: 'Mina always studies English at the library.', meaning: '미나는 항상 도서관에서 영어를 공부한다.', mine: true },
+    { sentence: 'Mina sometimes studies English at the park.', meaning: '미나는 가끔 공원에서 영어를 공부한다.' },
+  ],
+
   hints: {
     steps: [
       '장식 방 두 곳에 놓을 단어는 "항상"과 "도서관"이에요. 각각 어느 방이 어울릴지 생각해 보세요.',

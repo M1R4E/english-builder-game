@@ -112,5 +112,19 @@ export function validateLevel(level) {
   }
 
   if (!Array.isArray(level.hints.steps) || level.hints.steps.length === 0) problems.push('단계별 힌트가 없음');
+
+  // 생각해 보기(자기 설명)와 비교해 보기(대조 학습)는 선택이지만, 있으면 모양이 맞아야 한다
+  const se = level.selfExplain;
+  if (se) {
+    if (!se.question || !se.explain) problems.push('selfExplain에 question 또는 explain이 없음');
+    if (!Array.isArray(se.options) || se.options.length < 2) problems.push('selfExplain의 선택지가 2개 이상이어야 함');
+    else if (!se.options.some((o) => o.correct)) problems.push('selfExplain에 좋은 설명(correct: true)이 하나 이상 있어야 함');
+  }
+  for (const c of level.contrast ?? []) {
+    if (!c.sentence || !c.meaning) problems.push('contrast의 문장(sentence)과 뜻(meaning)이 모두 있어야 함');
+  }
+  if (level.contrast?.length && level.contrast.filter((c) => c.mine).length !== 1) {
+    problems.push('contrast에 이번 정답 표시(mine: true)가 하나 있어야 함');
+  }
   return problems;
 }

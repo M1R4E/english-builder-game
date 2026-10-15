@@ -69,6 +69,22 @@ export default {
     ],
   },
 
+  // 생각해 보기(자기 설명): 완공 후 짧은 질문. 점수와 관계없고 기록에만 남는다.
+  selfExplain: {
+    question: 'new bridge 앞에 an이 아니라 a를 쓴 이유는 무엇일까요?',
+    options: [
+      { text: '바로 뒤의 new가 자음 소리로 시작해서', correct: true },
+      { text: 'bridge가 b로 시작해서' },
+      { text: '다리가 하나라서 항상 a를 써서' },
+    ],
+    explain: 'a/an은 바로 뒤에 오는 단어의 첫소리로 정해요. an old bridge, a new bridge처럼요.',
+  },
+  // 비교해 보기(대조 학습): 비슷하지만 뜻이나 문법이 다른 문장. mine: 이번 정답
+  contrast: [
+    { sentence: 'Because the bridge was old, the workers built a new bridge.', meaning: '다리가 낡았기 때문에, 일꾼들은 새 다리를 지었다.', mine: true },
+    { sentence: 'Although the bridge was old, the workers did not build a new bridge.', meaning: '다리가 낡았지만, 일꾼들은 새 다리를 짓지 않았다. (반대)' },
+  ],
+
   hints: {
     steps: [
       '중심 이야기(일꾼들이 새 다리를 지었다)가 1층, 그 이유(다리가 낡았다)가 2층이에요. 계단이 두 층의 관계를 정해요.',

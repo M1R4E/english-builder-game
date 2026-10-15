@@ -63,6 +63,22 @@ export default {
     ],
   },
 
+  // 생각해 보기(자기 설명): 완공 후 짧은 질문. 점수와 관계없고 기록에만 남는다.
+  selfExplain: {
+    question: '"평화롭게"를 peacefully로 쓴 이유는 무엇일까요?',
+    options: [
+      { text: '자는 모습(동사)을 꾸미는 말이라서 부사를 썼다', correct: true },
+      { text: '아기(명사)를 꾸미는 말이라서' },
+      { text: '문장 끝에 오는 말은 항상 -ly라서' },
+    ],
+    explain: '동사를 꾸밀 때는 부사(-ly), 명사를 꾸밀 때는 형용사를 써요.',
+  },
+  // 비교해 보기(대조 학습): 비슷하지만 뜻이나 문법이 다른 문장. mine: 이번 정답
+  contrast: [
+    { sentence: 'The baby sleeps peacefully.', meaning: '그 아기는 평화롭게 잔다. (자는 모습을 꾸밈)', mine: true },
+    { sentence: 'The peaceful baby sleeps.', meaning: '그 평화로운 아기가 잔다. (아기를 꾸밈)' },
+  ],
+
   hints: {
     steps: [
       '먼저 주어 방과 동사 방을 짓고, 장식 방 두 개(어떻게, 어디서)를 채워 보세요.',

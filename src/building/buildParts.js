@@ -48,10 +48,20 @@ function roomLayout(floor) {
   });
 }
 
+// 쉬움 난이도의 시각적 힌트: 아직 짓지 않은 방에 "무엇이 들어갈지"를 질문으로 보여 준다
+const ROLE_PROMPTS = { S: '누가?', V: '무엇을 하나?', O: '무엇을?', C: '어떤 상태?' };
+function promptOf(room) {
+  if (ROLE_PROMPTS[room.role]) return ROLE_PROMPTS[room.role];
+  const m = room.name.replace(/^\d층 /, '').match(/^(어떻게|어디서|언제|얼마나 자주)/);
+  return m ? `${m[1]}?` : '꾸며 주는 말?';
+}
+
 // 방 이름표: 짓기 전 "주어 ?", 짓는 중·다 지은 뒤 "주어 · the cat"
-function roomLabel(room) {
+// prompts가 켜져 있으면(쉬움) 짓기 전 이름표가 "주어 · 누가?"처럼 질문을 보여 준다
+function roomLabel(room, prompts = false) {
   const role = ROLE_LABELS[room.role];
   if (room.warn) return [`! ${role} 확인`, 'warn'];
+  if (prompts && !room.text) return [`${role} · ${promptOf(room)}`, room.active ? 'active' : 'ghost'];
   if (room.state === 'ghost') return [`${role} ?`, room.active ? 'active' : 'ghost'];
   return [room.text ? `${role} · ${room.text}` : role, room.active ? 'active' : 'normal'];
 }
@@ -130,8 +140,8 @@ function door(f, { room, cx, w }) {
   );
 }
 
-function label(f, { room, cx }) {
-  const [text, style] = roomLabel(room);
+function label(f, { room, cx }, prompts) {
+  const [text, style] = roomLabel(room, prompts);
   const s = makeLabel(text, style, 0.8);
   s.position.set(cx, floorY(f) + H + 0.35, D / 2 + 0.3);
   return asUnit(s, room.ref);
@@ -224,7 +234,8 @@ function withoutLabels(obj) {
 
 // ── 설계도 전체 → 부품 목록 ──
 // options.labels: false면 글자 표지판을 붙이지 않는다.
-export function buildParts(bp, { labels = true } = {}) {
+// options.prompts: true면 짓기 전 방에 질문 안내(누가?, 무엇을?)를 보여 준다 (쉬움 난이도)
+export function buildParts(bp, { labels = true, prompts = false } = {}) {
   const parts = [];
   const add = (key, sig, create, delay = 0) =>
     parts.push({ key, sig: String(sig), delay, create: labels ? create : () => withoutLabels(create()) });
@@ -247,8 +258,8 @@ export function buildParts(bp, { labels = true } = {}) {
       if (room.det) add(`${key}-det`, `${room.det}-${where}`, () => plate(f, slot));
       if (room.prep) add(`${key}-prep`, `${room.prep}-${where}`, () => door(f, slot));
       if (labels) {
-        const [text, style] = roomLabel(room);
-        add(`${key}-label`, `${text}-${style}-${where}`, () => label(f, slot));
+        const [text, style] = roomLabel(room, prompts);
+        add(`${key}-label`, `${text}-${style}-${where}`, () => label(f, slot, prompts));
       }
     });
     if (floor.roofed) add(`f${f}-roof`, `${floor.isTop}-${floor.width}`, () => roof(f, floor.width, floor.isTop));

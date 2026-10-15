@@ -59,6 +59,22 @@ export default {
     ],
   },
 
+  // 생각해 보기(자기 설명): 완공 후 짧은 질문. 점수와 관계없고 기록에만 남는다.
+  selfExplain: {
+    question: 'milk 앞에 a를 붙이지 않은 이유는 무엇일까요?',
+    options: [
+      { text: 'milk는 셀 수 없는 명사라서', correct: true },
+      { text: 'warm이 앞에 있어서' },
+      { text: '언니가 한 명이라서' },
+    ],
+    explain: 'milk, water, bread처럼 셀 수 없는 명사 앞에는 a/an을 붙이지 않고, -s도 붙이지 않아요.',
+  },
+  // 비교해 보기(대조 학습): 비슷하지만 뜻이나 문법이 다른 문장. mine: 이번 정답
+  contrast: [
+    { sentence: 'My sister usually drinks warm milk.', meaning: '언니는 보통 따뜻한 우유를 마신다.', mine: true },
+    { sentence: 'My sister never drinks warm milk.', meaning: '언니는 따뜻한 우유를 절대 마시지 않는다.' },
+  ],
+
   hints: {
     steps: [
       '확인할 것이 여러 가지예요: 누구의 언니인지, 얼마나 자주인지, 어떤 우유인지, 언제의 일인지.',

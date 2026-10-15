@@ -1007,3 +1007,130 @@ body {
   .star-line .star.on { opacity: 1; }
   .tap-to-start, .tap-hint { opacity: 0.8; }
 }
+
+/* ===== 4단계: 설정 창 ===== */
+.settings-block { margin-top: 14px; }
+.settings-block h3 { margin: 0 0 6px; font-size: 0.95rem; }
+.settings-help { display: block; margin: 6px 0 0; font-family: var(--font-text); font-size: 0.85rem; color: var(--muted); }
+.segmented { display: inline-flex; padding: 3px; border-radius: 12px; background: #efe7da; gap: 3px; }
+.segmented button {
+  min-width: 72px;
+  min-height: 38px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  font: inherit;
+  color: var(--muted);
+  cursor: pointer;
+}
+.segmented button.is-on { background: #fff; color: var(--text); box-shadow: var(--shadow); }
+.toggle { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+.toggle input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.toggle-track {
+  flex: none;
+  position: relative;
+  width: 46px;
+  height: 26px;
+  margin-top: 1px;
+  border-radius: 999px;
+  background: #d8ccb9;
+  transition: background 0.2s;
+}
+.toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s;
+}
+.toggle input:checked + .toggle-track { background: var(--primary); }
+.toggle input:checked + .toggle-track::after { transform: translateX(20px); }
+.toggle input:focus-visible + .toggle-track { outline: 3px solid #f0b400; outline-offset: 2px; }
+.settings-admin { padding-top: 12px; border-top: 1px dashed var(--line); }
+.settings-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
+
+/* ===== 4단계: 점검 보고서의 학습 활동 ===== */
+.learn-question { margin: 0 0 8px; }
+.learn-options { display: grid; gap: 6px; }
+.learn-option {
+  padding: 8px 12px;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  font: inherit;
+  font-family: var(--font-text);
+  text-align: left;
+  color: var(--text);
+  cursor: pointer;
+}
+.learn-option:hover { border-color: #cdbfa9; }
+.learn-option.is-right { border-color: #7cc79c; background: #e6f6ec; }
+.learn-option.is-picked { border-color: #d3c7f3; background: #f5f2ff; }
+.learn-feedback { margin: 8px 0 0; font-family: var(--font-text); }
+.contrast-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.contrast-list li { display: flex; flex-direction: column; padding: 8px 10px; border-radius: 10px; background: #f7f2ea; }
+.contrast-list li.is-mine { background: #eef7f1; }
+.contrast-sentence { font-size: 1.02rem; }
+.contrast-meaning { font-family: var(--font-text); font-size: 0.85rem; color: var(--muted); }
+
+/* ===== 4단계: 우편함의 지갑·추천·설정 ===== */
+.mailbox-screen > .mailbox-settings { position: fixed; top: 12px; right: 12px; z-index: 30; }
+.wallet {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  z-index: 30;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+.wallet-label { font-size: 0.8rem; color: var(--muted); }
+.wallet b { font-weight: normal; color: var(--accent); font-variant-numeric: tabular-nums; }
+.recommend-note { margin: -4px 0 10px; color: #f4efe6; font-family: var(--font-text); }
+.recommend-badge {
+  position: absolute;
+  top: -10px;
+  left: -8px;
+  z-index: 1;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.8rem;
+  transform: rotate(-8deg);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* ===== 4단계: 설문 ===== */
+.survey-list { margin: 10px 0 0; padding-left: 20px; display: grid; gap: 14px; }
+.survey-q { margin: 0 0 6px; font-family: var(--font-text); }
+.survey-scale { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.survey-scale button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-height: 52px;
+  padding: 4px 2px;
+  border: 2px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+.survey-scale button span { font-family: var(--font-text); font-size: 0.68rem; color: var(--muted); }
+.survey-scale button.is-on { border-color: var(--primary); background: #e6f6ec; }

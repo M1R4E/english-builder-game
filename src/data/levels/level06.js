@@ -77,6 +77,23 @@ export default {
     ],
   },
 
+  // 생각해 보기(자기 설명): 완공 후 짧은 질문. 점수와 관계없고 기록에만 남는다.
+  selfExplain: {
+    question: '2층을 because로 이은 이유는 무엇일까요?',
+    options: [
+      { text: '비가 온 것이 집에 있었던 이유라서', correct: true },
+      { text: '집에 있었던 결과로 비가 와서' },
+      { text: '비가 왔는데도 집에 있어서' },
+    ],
+    explain: '뒤 절이 이유이면 because, 뒤 절이 결과이면 so를 써요.',
+  },
+  // 비교해 보기(대조 학습): 비슷하지만 뜻이나 문법이 다른 문장. mine: 이번 정답
+  contrast: [
+    { sentence: 'We stayed home because it was raining.', meaning: '비가 오고 있었기 때문에 우리는 집에 있었다. (뒤가 이유)', mine: true },
+    { sentence: 'It was raining, so we stayed home.', meaning: '비가 오고 있어서, 우리는 집에 있었다. (뒤가 결과)' },
+    { sentence: 'We stayed home, so it was raining.', meaning: '우리가 집에 있어서 비가 왔다. (이상한 뜻)' },
+  ],
+
   hints: {
     steps: [
       '1층(우리가 집에 있었다)과 2층(비가 오고 있었다) 중 어느 쪽이 원인이고 어느 쪽이 결과일까요?',
