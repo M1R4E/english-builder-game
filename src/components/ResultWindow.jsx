@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CATEGORY_LABELS, FIREWORKS_THRESHOLD } from '../config.js';
+import { CATEGORY_LABELS, ESTIMATE_PENALTY_RATE, ESTIMATE_TOLERANCE, FIREWORKS_THRESHOLD } from '../config.js';
 import { getCards, sentenceText } from '../game/analyzeSentence.js';
 import { formatWon, MAX_WON, toWon, wonText } from '../game/money.js';
 import Fireworks from './Fireworks.jsx';
@@ -51,7 +51,7 @@ function useCountUp(target, active, duration) {
 
 // 제출 결과 "점검 보고서" 창. 항목들이 차례대로 나타난다.
 //  1 성취 문구 → 2 청구 금액(숫자가 올라감) → 3 별(하나씩) → 4 항목별 그래프(그려짐, 높은 점수면 폭죽)
-//  → 5 필수 성분 → 6 점검 결과(빠르게 페이드 인) → 7 내 견적과 비교하기 → 8 버튼
+//  → 5 필수 성분 → 6 점검 결과(빠르게 페이드 인) → 7 내 견적과 비교하기 → 8 최종 공사 대금 → 9 버튼
 // X 또는 확인 버튼으로 닫으면 문장 고치기로 돌아간다. "바로 보기"를 누르면 연출을 건너뛴다.
 export default function ResultWindow({ level, attempt, reward, attemptCount, onEdit, onExit }) {
   const { result } = attempt;
@@ -79,8 +79,10 @@ export default function ResultWindow({ level, attempt, reward, attemptCount, onE
     t.push(now); // 6 점검 결과
     now += 400 + listItems * 50;
     t.push(now); // 7 내 견적과 비교하기
-    now += 400;
-    t.push(now); // 8 버튼
+    now += 500;
+    t.push(now); // 8 최종 공사 대금
+    now += 450;
+    t.push(now); // 9 버튼
     return t;
   }, [reward.stars, listItems]);
   const LAST = times.length;
@@ -209,8 +211,31 @@ export default function ResultWindow({ level, attempt, reward, attemptCount, onE
           {reward.predictionBadge && <span className="badge">{reward.predictionBadge}</span>}
           {reward.persistedBadge && <span className="badge">끝까지 수정해 완공</span>}
         </p>
-        <p className="muted small" style={{ '--i': 5 }}>
-          견적 비교는 내 예상이 얼마나 정확했는지 돌아보기 위한 것으로, 실제 공사 대금에는 영향을 주지 않아요.
+      </section>
+
+      {/* 최종 공사 대금 = 최고 청구 금액 − 견적 오차 차감 */}
+      <section className={`report-section pay reveal-list${shown(8)}`}>
+        <h3>최종 공사 대금</h3>
+        <ul className="pay-lines">
+          <li style={{ '--i': 0 }}>
+            <span>{attemptCount > 1 ? '가장 높은 청구 금액' : '청구 금액'}</span>
+            <b className="pay-amount">{wonText(reward.best)}</b>
+          </li>
+          <li style={{ '--i': 1 }} className={reward.estimatePenalty > 0 ? 'has-penalty' : ''}>
+            <span>견적 오차 차감</span>
+            <b className="pay-amount">
+              {reward.estimatePenalty > 0 ? `−${wonText(reward.estimatePenalty)}` : '차감 없음'}
+            </b>
+          </li>
+          <li style={{ '--i': 2 }} className="pay-total">
+            <span>최종 공사 대금</span>
+            <b className="pay-amount">{wonText(reward.finalPay)}</b>
+          </li>
+        </ul>
+        <p className="muted small" style={{ '--i': 3 }}>
+          견적과 첫 청구 금액의 차이가 {wonText(ESTIMATE_TOLERANCE)}을 넘으면, 넘은 금액의{' '}
+          {Math.round(ESTIMATE_PENALTY_RATE * 100)}%를 공사 대금에서 빼요(1,000원 미만은 빼지 않아요). 문장
+          점수(청구 금액)와 별 개수에는 영향을 주지 않아요.
         </p>
       </section>
 

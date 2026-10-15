@@ -15,13 +15,21 @@ const easeOutBack = (t) => {
   return 1 + c3 * (t - 1) ** 3 + c1 * (t - 1) ** 2;
 };
 
+const easeInOutCubic = (t) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2);
+
+const CELEBRATE_SECONDS = 1.8; // 완공 연출(한 바퀴 회전 + 통통 튀기) 시간
+const CLICK_MOVE_LIMIT = 6; // 이보다 많이 끌면(px) 클릭이 아니라 화면 돌리기로 본다
+
 // 3D 화면 전체(장면, 카메라, 조명, 땅, 건물)를 관리하는 클래스.
 // 건물 모양 자체는 만들지 않고, 밖에서 만든 건물(Group)을 받아서 보여 준다.
 // options.interactive: false면 마우스·손가락으로 돌릴 수 없다 (메인 화면용)
 // options.autoRotate : true면 카메라가 건물 주위를 천천히 돈다
+// options.onPick     : 자리 부품(기둥, 칸)을 누르면 그 자리 key로 호출된다
 export class BuildingRenderer {
-  constructor(container, { interactive = true, autoRotate = false } = {}) {
+  constructor(container, { interactive = true, autoRotate = false, onPick = null } = {}) {
     this.container = container;
+    this.onPick = onPick;
+    this.celebration = null; // 진행 중인 완공 연출 { startAt }
     this.lowPower = isLowPowerDevice();
     this.animations = []; // 등장 애니메이션 중인 부품 목록
     this.partMap = new Map(); // 지금 화면에 있는 부품: key → { sig, obj }
@@ -53,6 +61,8 @@ export class BuildingRenderer {
     this.buildingRoot = new THREE.Group();
     this.scene.add(this.buildingRoot);
 
+    if (interactive) this.setupPicking();
+
     // 컨테이너 크기가 바뀔 때마다 렌더러·카메라 비율을 다시 맞춘다.
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(container);
@@ -74,6 +84,52 @@ export class BuildingRenderer {
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     this.scene.add(ground);
+  }
+
+  // ── 자리 부품 누르기 ──
+  // 화면을 끌어서 돌리는 동작과 구분하기 위해, 누른 곳과 뗀 곳이 가까울 때만 "클릭"으로 본다.
+  setupPicking() {
+    this.raycaster = new THREE.Raycaster();
+    this.pointer = new THREE.Vector2();
+    const el = this.renderer.domElement;
+    let down = null;
+    this.handlers = {
+      pointerdown: (e) => {
+        down = { x: e.clientX, y: e.clientY };
+      },
+      pointerup: (e) => {
+        if (!down) return;
+        const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y);
+        down = null;
+        if (moved > CLICK_MOVE_LIMIT) return;
+        const key = this.slotAt(e);
+        if (key) this.onPick?.(key);
+      },
+      // 마우스를 자리 부품 위에 올리면 손가락 모양 커서
+      pointermove: (e) => {
+        if (e.pointerType !== 'mouse' || e.buttons) return;
+        el.style.cursor = this.slotAt(e) ? 'pointer' : '';
+      },
+    };
+    for (const [name, fn] of Object.entries(this.handlers)) el.addEventListener(name, fn);
+  }
+
+  // 화면의 한 점 → 그 아래에 있는 자리 부품의 key (없으면 null)
+  slotAt(e) {
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    this.pointer.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+    this.raycaster.setFromCamera(this.pointer, this.camera);
+    for (const hit of this.raycaster.intersectObject(this.buildingRoot, true)) {
+      for (let o = hit.object; o; o = o.parent) {
+        if (o.userData.slotKey) return o.userData.slotKey;
+      }
+    }
+    return null;
+  }
+
+  // ── 완공 연출: 건물이 한 바퀴 돌면서 통통 튄다 ──
+  celebrate() {
+    this.celebration = { startAt: performance.now() / 1000 };
   }
 
   // 부품 목록을 받아 건물을 갱신한다.
@@ -187,6 +243,22 @@ export class BuildingRenderer {
       a.obj.scale.copy(a.obj.userData.targetScale).multiplyScalar(Math.max(k, 0.0001));
       return t < 1;
     });
+
+    // 고르고 있는 자리가 은은하게 깜빡인다
+    MATERIALS.active.emissiveIntensity = 0.25 + 0.3 * (0.5 + 0.5 * Math.sin(now * 5));
+
+    if (this.celebration) {
+      const t = Math.min(1, (now - this.celebration.startAt) / CELEBRATE_SECONDS);
+      this.buildingRoot.rotation.y = easeInOutCubic(t) * Math.PI * 2;
+      // 세 번 통통 튀고, 튈수록 낮아진다
+      this.buildingRoot.position.y = Math.abs(Math.sin(t * Math.PI * 3)) * 0.9 * (1 - t);
+      if (t >= 1) {
+        this.buildingRoot.rotation.y = 0;
+        this.buildingRoot.position.y = 0;
+        this.celebration = null;
+      }
+    }
+
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
   }
@@ -194,6 +266,9 @@ export class BuildingRenderer {
   dispose() {
     this.renderer.setAnimationLoop(null);
     this.resizeObserver.disconnect();
+    for (const [name, fn] of Object.entries(this.handlers ?? {})) {
+      this.renderer.domElement.removeEventListener(name, fn);
+    }
     this.controls.dispose();
     this.clearBuilding();
     disposeObject(this.scene);

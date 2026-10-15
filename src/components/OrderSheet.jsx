@@ -139,6 +139,10 @@ export default function OrderSheet({ level, mode, prediction, onPredictionChange
                         {cond.text}{' '}
                         {status === 'pass' && <span className="state-tag ok">충족</span>}
                         {status && status !== 'pass' && <span className="state-tag warn">다시 확인</span>}
+                        <span className="condition-meaning">
+                          <span className="condition-meaning-label">문장에서는</span>
+                          {cond.grammar}
+                        </span>
                       </span>
                     </li>
                   );
@@ -171,7 +175,8 @@ export default function OrderSheet({ level, mode, prediction, onPredictionChange
                   className="slider"
                 />
                 <p className="receipt-note">
-                  * 이 공사를 마치고 받을 수 있을 것 같은 금액을 적어 보세요. 실제로 지급되는 공사 대금에는 영향이 없습니다.
+                  * 이 공사를 마치고 받을 수 있을 것 같은 금액을 적어 보세요. 견적이 첫 청구 금액과 많이 다를수록
+                  최종 공사 대금이 줄어듭니다.
                 </p>
                 <p className="receipt-note receipt-cta">도장을 눌러 주문을 수락하면 공사가 시작됩니다. →</p>
               </>

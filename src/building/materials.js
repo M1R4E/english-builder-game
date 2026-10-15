@@ -36,6 +36,16 @@ MATERIALS.ghost = new THREE.MeshBasicMaterial({
   depthWrite: false,
 });
 
+// 지금 카드를 고르고 있는 자리: 노란색으로 은은하게 깜빡인다 (깜빡임은 BuildingRenderer가 담당)
+MATERIALS.active = new THREE.MeshStandardMaterial({
+  color: '#ffd34d',
+  emissive: '#ffb800',
+  emissiveIntensity: 0.35,
+  flatShading: true,
+  transparent: true,
+  opacity: 0.85,
+});
+
 // 공유 재질은 앱 전체에서 재사용하므로 부품 정리할 때 지우지 않도록 표시한다.
 Object.values(MATERIALS).forEach((m) => {
   m.userData.shared = true;

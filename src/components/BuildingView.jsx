@@ -5,15 +5,32 @@ import { BuildingRenderer } from '../building/BuildingRenderer.js';
 // 화면에 <div>를 하나 만들고, 그 안에 3D 렌더러를 붙인다.
 // 부품 목록(parts)이 바뀔 때마다 렌더러에 전달하고,
 // 화면에서 사라질 때는 렌더러를 정리(dispose)해서 메모리가 새지 않게 한다.
-export default function BuildingView({ parts, bounds, insetTop = 0, insetBottom = 0, interactive = true, autoRotate = false }) {
+//  onPick       : 자리 부품(기둥 등)을 누르면 그 자리 key로 호출
+//  celebrateKey : 이 값이 새로 바뀔 때마다 완공 연출(회전 + 통통 튀기)을 한 번 한다 (0이면 안 함)
+export default function BuildingView({
+  parts,
+  bounds,
+  insetTop = 0,
+  insetBottom = 0,
+  interactive = true,
+  autoRotate = false,
+  onPick,
+  celebrateKey = 0,
+}) {
   const containerRef = useRef(null);
   const rendererRef = useRef(null);
+  const onPickRef = useRef(onPick);
   const [error, setError] = useState(false);
+  onPickRef.current = onPick;
 
   useEffect(() => {
     let renderer;
     try {
-      renderer = new BuildingRenderer(containerRef.current, { interactive, autoRotate });
+      renderer = new BuildingRenderer(containerRef.current, {
+        interactive,
+        autoRotate,
+        onPick: (key) => onPickRef.current?.(key), // 항상 최신 onPick을 부른다
+      });
     } catch (err) {
       console.error(err);
       setError(true);
@@ -37,11 +54,15 @@ export default function BuildingView({ parts, bounds, insetTop = 0, insetBottom 
     rendererRef.current?.setInsets(insetTop, insetBottom);
   }, [insetTop, insetBottom, error]);
 
+  useEffect(() => {
+    if (celebrateKey) rendererRef.current?.celebrate();
+  }, [celebrateKey]);
+
   return (
     <div className="building-view" ref={containerRef}>
       {error && (
         <p className="building-error">
-          3D 화면을 불러오지 못했어요. 문장 만들기와 채점은 그대로 할 수 있어요.
+          3D 화면을 불러오지 못했어요. 아래 공정표에서 자리를 골라 문장 만들기와 채점은 그대로 할 수 있어요.
         </p>
       )}
     </div>

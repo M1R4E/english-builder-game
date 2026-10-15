@@ -7,13 +7,14 @@ const STYLES = {
   ghost: { bg: 'rgba(235,243,252,0.92)', fg: '#3d6aa8', border: '#9cbde6' },
   warn: { bg: '#fff1d6', fg: '#8a4b00', border: '#e0a040' },
   success: { bg: '#e6f6ec', fg: '#24734a', border: '#7cc79c' },
+  active: { bg: '#fff3c4', fg: '#6b4a00', border: '#f0b400' }, // 지금 고르고 있는 자리
 };
 
 export function makeLabel(text, style = 'normal', scale = 1) {
   const s = STYLES[style];
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
-  const font = 'bold 44px system-ui, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
+  const font = '44px "Jua", system-ui, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif';
   ctx.font = font;
   const w = Math.ceil(ctx.measureText(text).width) + 48;
   const h = 76;

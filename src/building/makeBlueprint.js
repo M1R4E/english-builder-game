@@ -14,8 +14,9 @@ import { analyzeSentence, getCards } from '../game/analyzeSentence.js';
 //  제출 결과 정답        → 울타리와 깃발
 //
 // 자리 상태: 'filled' 카드가 놓임 / 'ghost' 비어 있음(반투명으로 위치만 표시)
+// options.activeSlot: 지금 카드를 고르고 있는 자리 key (예: '0-S'). 그 부품을 강조한다.
 
-export function makeBlueprint(level, ids, result = null) {
+export function makeBlueprint(level, ids, result = null, { activeSlot = null } = {}) {
   const analysis = analyzeSentence(getCards(level, ids));
   const required = level.structure.clauses;
   const floorCount = Math.max(required.length, analysis.clauses.length);
@@ -29,6 +30,13 @@ export function makeBlueprint(level, ids, result = null) {
     // 필요한 자리 + (필요 없지만) 플레이어가 넣은 목적어·보어 자리
     const roomRoles = ['O', 'C'].filter((r) => slots.includes(r) || has(r));
 
+    // 각 자리에 놓인 단어 (3D 표지판에 "주어 · the cat"처럼 보여 준다)
+    const words = {};
+    for (const role of ['S', 'V', 'O', 'C']) {
+      if (has(role)) words[role] = clause.roles[role][0].text;
+    }
+    const [activeFloor, activeRole] = activeSlot ? activeSlot.split('-') : [];
+
     floors.push({
       index: i,
       hasCards: clause.cards.length > 0,
@@ -37,6 +45,8 @@ export function makeBlueprint(level, ids, result = null) {
         V: has('V') ? 'filled' : 'ghost',
       },
       rooms: roomRoles.map((role) => ({ role, state: has(role) ? 'filled' : 'ghost' })),
+      words,
+      active: Number(activeFloor) === i ? activeRole : null, // 이 층에서 고르고 있는 자리의 성분
       modifiers: clause.roles.M?.length ?? 0,
       coreComplete: has('S') && has('V'),
       roomComplete: slots.every(has),

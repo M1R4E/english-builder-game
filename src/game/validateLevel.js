@@ -67,8 +67,10 @@ export function validateLevel(level) {
   }
 
   // 조건이 가리키는 채점 항목이 실제로 있는지
+  // 특별 요청 사항: 건축 표현(text)과 영어 문장에서의 뜻(grammar)이 둘 다 있어야 한다.
   for (const cond of level.conditions || []) {
     if (!checkIds.has(cond.checkId)) problems.push(`조건 ${cond.id}가 없는 채점 항목 ${cond.checkId}를 가리킴`);
+    if (!cond.text || !cond.grammar) problems.push(`조건 ${cond.id}에 text(건축 표현) 또는 grammar(문장에서의 뜻)가 없음`);
   }
 
   if (!Array.isArray(level.structure.clauses) || level.structure.clauses.length === 0) {

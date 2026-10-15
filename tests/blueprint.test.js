@@ -11,10 +11,16 @@ describe('건물 설계도', () => {
     expect(bp.floors[0].roomComplete).toBe(false);
   });
 
-  it('주어만 놓으면 주어 기둥만 채워진다', () => {
+  it('주어만 놓으면 주어 기둥만 채워지고, 기둥에 단어가 붙는다', () => {
     const bp = makeBlueprint(level, ['the-cat']);
     expect(bp.floors[0].pillars).toEqual({ S: 'filled', V: 'ghost' });
+    expect(bp.floors[0].words).toEqual({ S: 'the cat' });
     expect(bp.floors[0].roomComplete).toBe(false);
+  });
+
+  it('고르고 있는 자리를 층마다 표시한다', () => {
+    expect(makeBlueprint(level, [], null, { activeSlot: '0-V' }).floors[0].active).toBe('V');
+    expect(makeBlueprint(level, []).floors[0].active).toBeNull();
   });
 
   it('방(절)이 완성되면 정답이 아니어도 지붕이 생긴다 (기획 결정 ①)', () => {

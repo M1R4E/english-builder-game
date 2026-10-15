@@ -15,6 +15,9 @@
   --shadow: 0 2px 8px rgba(80, 60, 40, 0.08);
   --shadow-lg: 0 12px 40px rgba(60, 40, 20, 0.22);
   --mono: ui-monospace, 'Cascadia Mono', Consolas, 'D2Coding', monospace;
+  /* 글꼴: 게임 화면 전체는 주아, 긴 설명 글은 고운돋움 (src/main.jsx에서 불러온다) */
+  --font-game: 'Jua', system-ui, 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+  --font-text: 'Gowun Dodum', system-ui, 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -24,9 +27,24 @@ html, body, #root { height: 100%; margin: 0; }
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: system-ui, -apple-system, 'Segoe UI', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+  font-family: var(--font-game);
   font-size: 16px;
   line-height: 1.5;
+  /* 두 글꼴 모두 굵기가 하나뿐이라, 브라우저가 억지로 굵게 만들면 글자가 뭉개진다. → 가짜 굵기를 끈다 */
+  font-synthesis: none;
+}
+
+/* 긴 설명 글은 읽기 편한 고운돋움으로 */
+.receipt-block p, .meaning-details, .receipt-guide, .receipt-note, .condition-meaning,
+.hint-window li span, .check-text, .metacog p, .tray-empty, .celebration-sub {
+  font-family: var(--font-text);
+}
+.receipt-guide-label, .receipt-cta { font-family: var(--font-game); }
+
+/* 돈·숫자는 게임 글꼴로, 자릿수가 흔들리지 않게 */
+.receipt-total b, .amount-big, .cat-num, .check-points, .metacog-row b, .receipt-items td:last-child, .pay-amount {
+  font-family: var(--font-game) !important;
+  font-variant-numeric: tabular-nums;
 }
 
 .muted { color: var(--muted); margin: 0; }
@@ -355,29 +373,48 @@ body {
 .sentence { flex: 1; min-width: 0; }
 .dock-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 
-.sentence-board {
+/* 공정표: 건물의 자리들. 누르면 그 자리를 고른다 */
+.slot-board { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
+.slot-chip {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 120px;
   min-height: 56px;
-  padding: 6px 8px;
-  border: 2px dashed #d8ccb9;
+  padding: 6px 12px;
+  border: 2px dashed #b9cbe3;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.6);
+  background: rgba(235, 243, 252, 0.8);
+  font: inherit;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
 }
-.sentence-foot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
-.sentence-preview { margin: 0; font-size: 1.15rem; font-weight: 700; min-height: 1.5em; }
-.chip-controls { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+.slot-chip.is-filled { border-style: solid; background: #fff; }
+.slot-chip.role-S.is-filled { border-color: #e58f65; }
+.slot-chip.role-V.is-filled { border-color: #5b8fd9; }
+.slot-chip.role-O.is-filled { border-color: #b98fd9; }
+.slot-chip.role-C.is-filled { border-color: #d9b84f; }
+/* 고르고 있는 자리: 3D의 노란 기둥과 같은 색 + "고르는 중" 글자 */
+.slot-chip.is-active { border: 3px solid #f0b400; background: #fff3c4; box-shadow: 0 0 0 3px rgba(240, 180, 0, 0.25); }
+.slot-chip.has-error { background: #fff1d6; }
+.slot-name { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--muted); }
+.slot-now { padding: 0 6px; border-radius: 999px; background: #f0b400; color: #fff; font-size: 0.7rem; }
+.slot-word { font-size: 1.15rem; }
+.slot-chip:not(.is-filled) .slot-word { color: #6f9fd8; }
+.sentence-preview { margin: 6px 0 0; font-size: 1.2rem; min-height: 1.5em; }
 
+/* 자재(카드) 판: 고른 자리에 맞는 카드만 */
 .card-tray {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
   margin-top: 12px;
-  padding-top: 12px;
+  padding-top: 10px;
   border-top: 1px dashed #d8ccb9;
 }
+.tray-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.tray-title { margin: 0; color: #5d544d; }
+.tray-title b { font-weight: normal; color: #6b4a00; background: #fff3c4; padding: 1px 8px; border-radius: 6px; }
+.tray-cards { display: flex; flex-wrap: wrap; gap: 8px; }
+.tray-empty { margin: 0; color: var(--muted); }
 
 /* 카드 (문장 성분별 색 + 이름표) */
 .word-card {
@@ -404,7 +441,8 @@ body {
 .word-card.role-CONJ { border-color: #a68a64; }
 .word-card:hover:not(:disabled) { transform: translateY(-1px); }
 .word-card.is-used { opacity: 0.35; cursor: default; box-shadow: none; }
-.word-card.is-active { outline: 3px solid var(--text); outline-offset: 2px; }
+.word-card.is-chosen { background: #fff3c4; outline: 3px solid #f0b400; outline-offset: 1px; }
+.chosen-chip { background: #f0b400; color: #fff; }
 .word-card.has-error { background: #fff1d6; }
 .error-dot {
   display: inline-grid;
@@ -550,11 +588,27 @@ body {
 }
 .receipt-items { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
 .receipt-items th { text-align: left; font-size: 0.78rem; color: var(--muted); font-weight: 700; padding-bottom: 4px; }
-.receipt-items th:last-child, .receipt-items td:last-child { text-align: right; font-family: var(--mono); }
+.receipt-items th:last-child, .receipt-items td:last-child { text-align: right; font-family: var(--font-game); }
 .receipt-items td { padding: 2px 0; }
 .receipt-conditions { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 6px; }
 .receipt-conditions li { display: grid; grid-template-columns: 18px 1fr; align-items: start; gap: 8px; }
 .receipt-conditions .receipt-box { margin-top: 3px; }
+/* 요청 아래에 "문장에서는 ~" 으로 영어 문장에서의 뜻을 작게 덧붙인다 */
+.condition-meaning {
+  display: block;
+  margin-top: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: #f4eee2;
+  font-size: 0.85rem;
+  color: #5d544d;
+}
+.condition-meaning-label {
+  margin-right: 6px;
+  font-family: var(--font-game);
+  font-size: 0.75rem;
+  color: var(--accent);
+}
 .receipt-box {
   display: inline-grid;
   place-items: center;
@@ -566,7 +620,7 @@ body {
   color: #24734a;
 }
 .receipt-total { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.receipt-total b { font-family: var(--mono); font-size: 1.6rem; color: var(--accent); white-space: nowrap; }
+.receipt-total b { font-family: var(--font-game); font-size: 1.6rem; color: var(--accent); white-space: nowrap; }
 .receipt-note { margin: 6px 0 0; font-size: 0.78rem; color: var(--muted); }
 .receipt-note.center { text-align: center; }
 .slider { width: 100%; height: 36px; accent-color: var(--accent); }
@@ -651,7 +705,7 @@ body {
 
 .amount-line { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .amount-label { font-size: 0.85rem; font-weight: 700; color: var(--muted); }
-.amount-big { font-family: var(--mono); font-size: 2.1rem; font-weight: 800; }
+.amount-big { font-family: var(--font-game); font-size: 2.1rem; font-weight: 800; }
 .amount-max { color: var(--muted); }
 
 /* 별: 하나씩 튀어나오며 나타난다 */
@@ -704,7 +758,45 @@ body {
   70% { opacity: 1; }
   100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1); }
 }
-.cat-num { text-align: right; font-family: var(--mono); font-size: 0.85rem; }
+/* 완공 연출: 화면 가득 폭죽 + "건물 완공!" */
+.fireworks.fireworks-full { position: fixed; inset: 0; height: auto; }
+.fireworks-full .burst span { width: 11px; height: 11px; }
+.celebration {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  padding: 16vh 16px 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.celebration-banner {
+  padding: 10px 34px;
+  border-radius: 18px;
+  background: var(--primary);
+  color: #fff;
+  font-size: clamp(2.2rem, 8vw, 3.6rem);
+  letter-spacing: 0.08em;
+  box-shadow: 0 8px 0 #2d7650, 0 14px 30px rgba(40, 80, 50, 0.35);
+  animation: banner-pop 0.6s cubic-bezier(0.2, 1.5, 0.4, 1) both;
+}
+.celebration-sub {
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(40, 30, 20, 0.5);
+  animation: fade-in 0.4s 1s both;
+}
+@keyframes banner-pop {
+  from { opacity: 0; transform: scale(0.3) rotate(-8deg); }
+  to { opacity: 1; transform: none; }
+}
+
+.cat-num { text-align: right; font-family: var(--font-game); font-size: 0.85rem; }
 .penalty-row { padding-top: 6px; border-top: 1px dashed var(--line); }
 .penalty-text { font-weight: 700; }
 .penalty-row.has-penalty { color: #a33b1f; }
@@ -719,13 +811,21 @@ body {
 .check-missing { background: #fdece7; }
 .check-partial { background: #f5f2ff; }
 .check-skipped, .check-blocked { color: var(--muted); }
-.check-points { font-family: var(--mono); font-size: 0.82rem; color: var(--muted); }
+.check-points { font-family: var(--font-game); font-size: 0.82rem; color: var(--muted); }
 
 .metacog-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
 .metacog-row div { display: flex; flex-direction: column; background: #f7f2ea; border-radius: 10px; padding: 6px; }
-.metacog-row b { font-family: var(--mono); font-size: 1.3rem; }
+.metacog-row b { font-family: var(--font-game); font-size: 1.3rem; }
 .metacog p { margin: 8px 0 0; }
 .badges:empty { display: none; }
+
+/* 최종 공사 대금: 영수증처럼 더하고 빼는 줄 */
+.pay-lines { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.pay-lines li { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.pay-lines li.has-penalty { color: #a33b1f; }
+.pay-lines .pay-total { margin-top: 4px; padding-top: 6px; border-top: 2px solid var(--text); font-size: 1.15rem; }
+.pay-total .pay-amount { font-size: 1.5rem; color: var(--primary); }
+.pay p { margin: 8px 0 0; }
 .badge {
   display: inline-block;
   margin-right: 6px;
@@ -745,7 +845,7 @@ body {
   .dock-actions .btn-primary { grid-column: 1 / -1; order: -1; }
   .dock-actions .btn { padding: 0 8px; }
   .word-card { font-size: 1rem; padding: 6px 12px; }
-  .chip-controls { margin-left: 0; }
+  .slot-chip { flex: 1; min-width: 0; }
 }
 
 @media (max-width: 480px) {

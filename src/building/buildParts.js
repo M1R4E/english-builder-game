@@ -33,7 +33,24 @@ function group(...children) {
   return g;
 }
 
-const slotLabel = (role, state) => `${ROLE_LABELS[role]}${state === 'ghost' ? ' ?' : ''}`;
+// 자리 표지판 글자: 빈자리 "주어 ?", 카드가 놓이면 "주어 · the cat"
+function slotLabel(role, state, word) {
+  if (state === 'ghost' || !word) return `${ROLE_LABELS[role]} ?`;
+  return `${ROLE_LABELS[role]} · ${word}`;
+}
+
+// 표지판 모양: 고르고 있는 자리는 노랑, 빈자리는 파랑, 채워진 자리는 흰색
+const labelStyle = (state, active) => (active ? 'active' : state === 'ghost' ? 'ghost' : 'normal');
+
+// 자리 부품 재질: 고르고 있는 자리는 노랑(깜빡임), 빈자리는 반투명 유령
+const slotMaterial = (state, active, filledMaterial) =>
+  active ? MATERIALS.active : state === 'ghost' ? MATERIALS.ghost : filledMaterial;
+
+// 누를 수 있는 자리 부품에 자리 key를 붙여 둔다 → 렌더러가 클릭된 부품의 자리를 알아낸다
+function asSlot(obj, f, role) {
+  obj.userData.slotKey = `${f}-${role}`;
+  return obj;
+}
 
 // ── 부품 만들기 ──
 
@@ -46,13 +63,15 @@ function slab(f, state) {
   return box(W + 0.4, SLAB, D + 0.4, mat, 0, floorY(f) - SLAB / 2, 0);
 }
 
-function pillars(f, role, state) {
+function pillars(f, role, state, active, word) {
   const x = role === 'S' ? -W / 2 : W / 2;
-  const mat = state === 'ghost' ? MATERIALS.ghost : MATERIALS[`pillar${role}`];
+  const mat = slotMaterial(state, active, MATERIALS[`pillar${role}`]);
   const y = floorY(f) + H / 2;
-  const label = makeLabel(slotLabel(role, state), state === 'ghost' ? 'ghost' : 'normal', 0.9);
+  const label = makeLabel(slotLabel(role, state, word), labelStyle(state, active), 0.9);
   label.position.set(x, floorY(f) + H * 0.55, D / 2 + 0.55);
-  return group(box(0.35, H, 0.35, mat, x, y, -D / 2), box(0.35, H, 0.35, mat, x, y, D / 2), label);
+  // 고르는 중인 기둥은 조금 굵게 해서 눈에 띄게
+  const t = active ? 0.45 : 0.35;
+  return asSlot(group(box(t, H, t, mat, x, y, -D / 2), box(t, H, t, mat, x, y, D / 2), label), f, role);
 }
 
 // 벽: 앞쪽은 열어 두는 "인형의 집" 방식 → 방 안의 칸과 가구가 보인다.
@@ -74,12 +93,12 @@ function walls(f) {
 }
 
 // 목적어·보어 칸: 방 안쪽 뒤편에 놓이는 상자
-function roomSlot(f, role, state, i, count) {
+function roomSlot(f, role, state, i, count, active, word) {
   const x = count === 1 ? 0 : -0.8 + i * 1.6;
-  const mat = state === 'ghost' ? MATERIALS.ghost : MATERIALS[`room${role}`];
-  const label = makeLabel(slotLabel(role, state), state === 'ghost' ? 'ghost' : 'normal', 0.8);
+  const mat = slotMaterial(state, active, MATERIALS[`room${role}`]);
+  const label = makeLabel(slotLabel(role, state, word), labelStyle(state, active), 0.8);
   label.position.set(x, floorY(f) + 1.35, -D / 2 + 0.6);
-  return group(box(1.3, 0.9, 0.8, mat, x, floorY(f) + 0.45, -D / 2 + 0.6), label);
+  return asSlot(group(box(1.3, 0.9, 0.8, mat, x, floorY(f) + 0.45, -D / 2 + 0.6), label), f, role);
 }
 
 // 수식어: 방 안의 화분
@@ -196,13 +215,16 @@ export function buildParts(bp, { labels = true } = {}) {
   for (const fl of bp.floors) {
     const f = fl.index;
     if (f > 0) add(`f${f}-slab`, fl.hasCards ? 'filled' : 'ghost', () => slab(f, fl.hasCards ? 'filled' : 'ghost'));
+    const words = fl.words ?? {};
     for (const role of ['S', 'V']) {
       const state = fl.pillars[role];
-      add(`f${f}-${role}`, state, () => pillars(f, role, state));
+      const active = fl.active === role;
+      add(`f${f}-${role}`, `${state}-${active}-${words[role] ?? ''}`, () => pillars(f, role, state, active, words[role]));
     }
     fl.rooms.forEach((room, i) => {
-      add(`f${f}-room-${room.role}`, `${room.state}-${i}-${fl.rooms.length}`, () =>
-        roomSlot(f, room.role, room.state, i, fl.rooms.length));
+      const active = fl.active === room.role;
+      add(`f${f}-room-${room.role}`, `${room.state}-${i}-${fl.rooms.length}-${active}-${words[room.role] ?? ''}`, () =>
+        roomSlot(f, room.role, room.state, i, fl.rooms.length, active, words[room.role]));
     });
     if (fl.coreComplete) add(`f${f}-walls`, 1, () => walls(f));
     for (let i = 0; i < fl.modifiers; i += 1) add(`f${f}-furn-${i}`, 1, () => furniture(f, i));

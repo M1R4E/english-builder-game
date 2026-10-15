@@ -9,14 +9,15 @@ const BURSTS = [
 ];
 const PARTICLES = 16;
 
-export default function Fireworks() {
+// spread: 퍼지는 거리 배율 (화면 전체에 터뜨릴 때는 크게), className: 위치·크기를 바꿀 때
+export default function Fireworks({ spread = 1, className = '' }) {
   return (
-    <div className="fireworks" aria-hidden="true">
+    <div className={`fireworks ${className}`} aria-hidden="true">
       {BURSTS.map((b, i) => (
         <div key={i} className="burst" style={{ left: `${b.x}%`, top: `${b.y}%` }}>
           {Array.from({ length: PARTICLES }, (_, k) => {
             const angle = (k / PARTICLES) * Math.PI * 2;
-            const dist = 55 + (k % 3) * 12;
+            const dist = (55 + (k % 3) * 12) * spread;
             return (
               <span
                 key={k}
