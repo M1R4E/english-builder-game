@@ -22,14 +22,18 @@
 
 ```
 src/
-  App.jsx           화면 전체 배치
-  components/       화면 조각 (React)
-  building/         3D 건물 (Three.js)
+  App.jsx           화면 전환 (레벨 선택 ↔ 플레이)
+  config.js         배점, 완공 기준 등 조정 가능한 숫자
+  data/levels/      📖 레벨 데이터 (문장 카드, 정답, 채점 항목, 힌트)
+  game/             🧠 게임 규칙 (문장 분석, 채점, 보상, 진행 상태, 데이터 검사)
+  building/         🏠 3D 건물
+    makeBlueprint.js     카드 → 건물 설계도
+    buildParts.js        설계도 → 3D 부품
     BuildingRenderer.js  장면·카메라·조명·애니메이션 관리
-    materials.js         건물 색(재질) 모음
-    parts/               건물 부품 만드는 코드
+  components/       🖥️ 화면 조각 (React)
   styles/app.css    디자인과 반응형 레이아웃
+tests/              자동 테스트
 docs/               개발 기록과 결정 사항
 ```
 
-뒤 단계에서 `data/`(레벨 데이터), `game/`(채점·힌트 규칙), `storage/`(기록 저장) 폴더가 추가됩니다.
+뒤 단계에서 `storage/`(기록 저장) 폴더가 추가됩니다.

@@ -22,6 +22,8 @@ export class BuildingRenderer {
     this.container = container;
     this.lowPower = isLowPowerDevice();
     this.animations = []; // 등장 애니메이션 중인 부품 목록
+    this.partMap = new Map(); // 지금 화면에 있는 부품: key → { sig, obj }
+    this.bounds = null;
 
     this.renderer = new THREE.WebGLRenderer({ antialias: !this.lowPower });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.lowPower ? 1.5 : 2));
@@ -68,43 +70,68 @@ export class BuildingRenderer {
     this.scene.add(ground);
   }
 
-  // 새 건물로 교체한다. 이전 건물의 형상(geometry)은 메모리에서 해제한다.
-  setBuilding(group) {
-    this.clearBuilding();
-    group.traverse((obj) => {
-      if (obj.isMesh) {
-        obj.castShadow = !this.lowPower;
-        obj.receiveShadow = !this.lowPower;
-      }
-    });
-    // userData.appearDelay가 있는 부품은 작게 시작해서 커지며 등장한다.
-    // 실제 시계(performance.now) 기준이라 화면이 느리게 그려져도 제시간에 끝난다.
-    const now = performance.now() / 1000;
-    group.traverse((obj) => {
-      if (obj.userData.appearDelay !== undefined) {
-        obj.userData.targetScale = obj.scale.clone();
-        obj.scale.setScalar(0.0001);
-        this.animations.push({ obj, startAt: now + obj.userData.appearDelay, duration: 0.45 });
-      }
-    });
-    this.buildingRoot.add(group);
-    this.fitCamera(group);
-  }
+  // 부품 목록을 받아 건물을 갱신한다.
+  //  - key와 sig가 같은 부품: 그대로 둔다
+  //  - 없어졌거나 상태가 바뀐 부품: 장면에서 빼고 메모리 해제
+  //  - 새 부품: 작게 시작해서 커지며 등장 (차례대로 조금씩 늦게)
+  updateParts(parts, bounds) {
+    if (!Array.isArray(parts)) return; // 잘못된 값이 들어와도 화면 전체가 멈추지 않게
+    const next = new Map(parts.map((p) => [p.key, p]));
+    for (const [key, entry] of this.partMap) {
+      const p = next.get(key);
+      if (!p || p.sig !== entry.sig) this.removePart(key);
+    }
 
-  clearBuilding() {
-    this.animations = [];
-    for (const child of [...this.buildingRoot.children]) {
-      this.buildingRoot.remove(child);
-      disposeObject(child);
+    const now = performance.now() / 1000;
+    let order = 0;
+    for (const p of parts) {
+      if (this.partMap.has(p.key)) continue;
+      const obj = p.create();
+      // 부품의 가운데를 기준으로 커지도록, 가운데에 축(pivot)을 만든다.
+      const center = new THREE.Box3().setFromObject(obj).getCenter(new THREE.Vector3());
+      const pivot = new THREE.Group();
+      pivot.position.copy(center);
+      obj.position.sub(center);
+      pivot.add(obj);
+      pivot.traverse((m) => {
+        if (m.isMesh) {
+          m.castShadow = !this.lowPower && !m.userData.noShadow;
+          m.receiveShadow = !this.lowPower && !m.userData.noShadow;
+        }
+      });
+      // 처음 화면을 열 때만 애니메이션 없이 바로 보여 줘도 되지만, 짓는 느낌을 위해 항상 등장시킨다.
+      pivot.userData.targetScale = new THREE.Vector3(1, 1, 1);
+      pivot.scale.setScalar(0.0001);
+      this.animations.push({ obj: pivot, startAt: now + order * 0.06, duration: 0.4 });
+      order += 1;
+      this.buildingRoot.add(pivot);
+      this.partMap.set(p.key, { sig: p.sig, obj: pivot });
+    }
+
+    // 건물 크기가 바뀌었을 때만 카메라를 다시 맞춘다 (카드 하나 바꿀 때마다 화면이 흔들리지 않게).
+    if (bounds && (!this.bounds || Math.abs(this.bounds.radius - bounds.radius) > 0.01)) {
+      this.bounds = bounds;
+      this.fitCamera();
     }
   }
 
-  // 건물 크기를 재서 화면 안에 전부 들어오도록 카메라 거리를 정한다.
-  fitCamera(group) {
-    const box = new THREE.Box3().setFromObject(group);
-    const size = box.getSize(new THREE.Vector3());
-    const center = box.getCenter(new THREE.Vector3());
-    const radius = Math.max(size.length() / 2, 1.5);
+  removePart(key) {
+    const entry = this.partMap.get(key);
+    if (!entry) return;
+    this.animations = this.animations.filter((a) => a.obj !== entry.obj);
+    this.buildingRoot.remove(entry.obj);
+    disposeObject(entry.obj);
+    this.partMap.delete(key);
+  }
+
+  clearBuilding() {
+    for (const key of [...this.partMap.keys()]) this.removePart(key);
+  }
+
+  // 건물 크기에 맞춰 화면 안에 전부 들어오도록 카메라 거리를 정한다.
+  fitCamera() {
+    if (!this.bounds) return;
+    const { center, radius } = this.bounds;
     const fov = THREE.MathUtils.degToRad(this.camera.fov);
     const fitHeight = radius / Math.sin(fov / 2);
     const fitWidth = fitHeight / Math.min(this.camera.aspect, 1);
@@ -114,7 +141,6 @@ export class BuildingRenderer {
     this.controls.target.copy(center);
     this.controls.maxDistance = distance * 2;
     this.controls.update();
-    this.lastFit = group;
   }
 
   resize() {
@@ -123,7 +149,7 @@ export class BuildingRenderer {
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
-    if (this.lastFit) this.fitCamera(this.lastFit);
+    this.fitCamera();
   }
 
   tick() {
@@ -144,19 +170,22 @@ export class BuildingRenderer {
     this.resizeObserver.disconnect();
     this.controls.dispose();
     this.clearBuilding();
-    this.scene.traverse(disposeObject);
+    disposeObject(this.scene);
     this.renderer.dispose();
     this.renderer.domElement.remove();
   }
 }
 
-// 형상과 (공유되지 않는) 재질을 GPU 메모리에서 해제한다.
+// 형상, (공유되지 않는) 재질, 글자 그림(텍스처)을 GPU 메모리에서 해제한다.
+// 스프라이트의 형상은 Three.js가 모든 스프라이트에 함께 쓰는 것이라 지우지 않는다.
 function disposeObject(root) {
-  root.traverse?.((obj) => {
-    if (obj.geometry) obj.geometry.dispose();
+  root.traverse((obj) => {
+    if (obj.geometry && !obj.isSprite) obj.geometry.dispose();
     const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
     mats.forEach((m) => {
-      if (m && !m.userData?.shared) m.dispose();
+      if (!m || m.userData?.shared) return;
+      m.map?.dispose();
+      m.dispose();
     });
   });
 }

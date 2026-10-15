@@ -118,7 +118,7 @@ body {
 }
 
 /* ===== 버튼: 힌트(노랑, 왼쪽)와 제출(초록, 오른쪽)을 색·아이콘·위치로 구분 ===== */
-.actions { display: flex; gap: 10px; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; }
 
 .btn {
   min-height: 48px;
@@ -127,6 +127,7 @@ body {
   border: 2px solid transparent;
   font: inherit;
   font-weight: 700;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -134,7 +135,161 @@ body {
 
 .btn-ghost { background: var(--surface); border-color: var(--line); color: var(--text); }
 .btn-hint { background: var(--hint); color: #4a3a10; }
-.btn-submit { background: var(--submit); color: #fff; margin-left: auto; }
+.btn-submit { background: var(--submit); color: #fff; margin-left: auto; flex-grow: 1; }
+
+/* PC: 패널이 길어져도 3D 화면은 화면 높이에 고정되어 따라온다 */
+@media (min-width: 1024px) {
+  .stage { position: sticky; top: var(--gap); height: calc(100vh - 90px); align-self: start; }
+}
+
+.btn-small { min-height: 40px; padding: 0 12px; font-size: 0.92rem; }
+.btn-wide { width: 100%; }
+
+.small { font-size: 0.85rem; }
+
+.building-view { position: relative; }
+.building-error { position: absolute; inset: auto 12px 12px; margin: 0; padding: 10px; background: #fff; border-radius: 10px; }
+
+/* ===== 레벨 선택 ===== */
+.level-select {
+  flex: 1;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: var(--gap);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.intro h2 { font-size: 1.15rem; }
+.intro p { margin: 0; }
+
+.level-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.level-card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 14px 16px;
+  text-align: left;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+}
+.level-card:hover:not(:disabled) { border-color: var(--accent); }
+.level-card:disabled { opacity: 0.6; cursor: not-allowed; }
+.level-num { font-size: 0.8rem; color: var(--muted); font-weight: 700; }
+.level-title { font-size: 1.1rem; font-weight: 800; }
+.level-topic { font-size: 0.9rem; color: var(--muted); }
+.level-status { display: flex; gap: 8px; align-items: center; font-size: 0.9rem; margin-top: 4px; }
+
+.stars { letter-spacing: 1px; }
+.star { color: #cfc4b4; }
+.star.on { color: #e9a400; }
+
+/* ===== 의뢰 ===== */
+.mission p { margin: 0 0 6px; }
+.meaning { font-weight: 600; }
+.conditions { list-style: none; margin: 6px 0 0; padding: 0; }
+.tag {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #efe7da;
+  font-size: 0.78rem;
+  font-weight: 700;
+  vertical-align: 1px;
+}
+.tag-cond { background: #e3effa; color: #2d5c96; }
+.cond-state { font-weight: 700; }
+.cond-state.ok { color: #24734a; }
+.cond-state.no { color: #8a4b00; }
+
+/* ===== 예상 점수 ===== */
+.prediction p { margin: 0 0 6px; }
+.prediction-value { font-size: 2.2rem; font-weight: 800; text-align: center; color: var(--accent); }
+.slider { width: 100%; height: 36px; accent-color: var(--accent); }
+.slider-ends { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--muted); margin-bottom: 8px; }
+
+/* ===== 카드 (문장 성분별 색 + 이름표) ===== */
+.word-card { cursor: pointer; font-family: inherit; color: var(--text); gap: 6px; }
+.word-card.role-S { border-color: #e58f65; }
+.word-card.role-V { border-color: #5b8fd9; }
+.word-card.role-O { border-color: #b98fd9; }
+.word-card.role-C { border-color: #d9b84f; }
+.word-card.role-M { border-color: #8fc0a9; }
+.word-card.role-CONJ { border-color: #a68a64; }
+.word-card:hover:not(:disabled) { transform: translateY(-1px); }
+.word-card.is-used { opacity: 0.35; cursor: default; }
+.word-card.is-active { outline: 3px solid var(--text); outline-offset: 2px; }
+.word-card.has-error { background: #fff1d6; }
+.role-chip {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #f1ebe2;
+  color: var(--muted);
+}
+
+.sentence-board { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chip-controls { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.sentence-preview { margin: 10px 0 0; font-size: 1.2rem; font-weight: 700; min-height: 1.5em; }
+
+.hint-box { background: #fff8e1; border-color: #f2d78b; }
+.hint-box ol { margin: 0; padding-left: 20px; }
+.hint-box li + li { margin-top: 6px; }
+
+/* ===== 결과 ===== */
+.result { display: flex; flex-direction: column; gap: 12px; }
+.result-title { font-size: 1.2rem; font-weight: 800; margin: 0; }
+.result-sentence { font-size: 1.1rem; margin: 4px 0; }
+.score-line { display: flex; align-items: baseline; gap: 8px; }
+.score-big { font-size: 2.4rem; font-weight: 800; }
+.score-max { color: var(--muted); }
+.score-line .stars { font-size: 1.4rem; margin-left: auto; }
+
+.category-bars { display: grid; gap: 6px; margin-top: 8px; }
+.cat-row { display: grid; grid-template-columns: 7.5em 1fr 4.5em; gap: 8px; align-items: center; font-size: 0.9rem; }
+.cat-bar { height: 10px; border-radius: 999px; background: #efe7da; overflow: hidden; }
+.cat-bar span { display: block; height: 100%; background: var(--submit); border-radius: 999px; }
+.cat-num { text-align: right; font-variant-numeric: tabular-nums; }
+
+.check-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.check { display: grid; grid-template-columns: 1.6em 1fr auto; gap: 6px; align-items: start; padding: 6px 8px; border-radius: 10px; }
+.check-fail { background: #fff1d6; }
+.check-partial { background: #f3f0ff; }
+.check-skipped { color: var(--muted); }
+.check-status { font-weight: 700; }
+.check-points { font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.metacog-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
+.metacog-row div { display: flex; flex-direction: column; background: #f7f2ea; border-radius: 10px; padding: 6px; }
+.metacog-row b { font-size: 1.3rem; }
+.metacog p { margin: 8px 0 0; }
+.badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: #e6f6ec;
+  color: #24734a;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
 
 /* ===== 태블릿: 3D 위, 패널 아래 ===== */
 @media (max-width: 1023px) {
