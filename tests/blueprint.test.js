@@ -1,88 +1,67 @@
 import { describe, expect, it } from 'vitest';
-import level from '../src/data/levels/level01.js';
-import level3 from '../src/data/levels/level03.js';
-import level5 from '../src/data/levels/level05.js';
 import { makeBlueprint } from '../src/building/makeBlueprint.js';
+import level from '../src/data/levels/level01.js';
+import level5 from '../src/data/levels/level05.js';
+import level7 from '../src/data/levels/level07.js';
 import { scoreSentence } from '../src/game/scoring.js';
+import { answerChoices } from './helpers.js';
 
-const cat = { '0-S': 'the-cat' };
-const catSleeps = { '0-S': 'the-cat', '0-V': 'sleeps' };
+const room = (bp, ref) => bp.floors.flatMap((f) => f.rooms).find((r) => r.ref === ref);
 
 describe('건물 설계도', () => {
-  it('카드가 없으면 주어·동사 기둥이 모두 빈자리(유령)이고 지붕이 없다', () => {
+  it('층수를 고르기 전에는 기초만 있다', () => {
     const bp = makeBlueprint(level, {});
-    expect(bp.floors).toHaveLength(1);
-    expect(bp.floors[0].pillars).toEqual({ S: 'ghost', V: 'ghost' });
-    expect(bp.floors[0].roomComplete).toBe(false);
+    expect(bp.floors).toEqual([]);
+    expect(bp.stairs).toEqual([]);
   });
 
-  it('주어만 놓으면 주어 기둥만 채워지고, 기둥에 단어가 붙는다', () => {
-    const bp = makeBlueprint(level, cat);
-    expect(bp.floors[0].pillars).toEqual({ S: 'filled', V: 'ghost' });
-    expect(bp.floors[0].words).toEqual({ '0-S': 'the cat' });
-    expect(bp.floors[0].roomComplete).toBe(false);
-  });
-
-  it('고르고 있는 자리를 층마다 표시한다', () => {
-    expect(makeBlueprint(level, {}, null, { activeSlot: '0-V' }).floors[0].active).toBe('0-V');
-    expect(makeBlueprint(level, {}).floors[0].active).toBeNull();
-  });
-
-  it('방(절)이 완성되면 정답이 아니어도 지붕이 생긴다 (기획 결정 ①)', () => {
-    for (const p of [catSleeps, { '0-S': 'the-cats', '0-V': 'sleeps' }, { '0-S': 'the-cat', '0-V': 'slept' }]) {
-      expect(makeBlueprint(level, p).floors[0].roomComplete).toBe(true);
-    }
-  });
-
-  it('장식 자리는 빈자리여도 지붕에 영향이 없고, 빈자리는 유령으로 표시된다', () => {
-    const bp = makeBlueprint(level3, { '0-S': 'the-baby', '0-V': 'sleeps' });
-    expect(bp.floors[0].roomComplete).toBe(true);
-    expect(bp.floors[0].mods).toEqual([
-      { key: '0-M-how', state: 'ghost' },
-      { key: '0-M-where', state: 'ghost' },
+  it('층수를 고르면 방들이 유령(아직 시작 전)으로 보이고, 지금 짓는 방이 "짓는 중"', () => {
+    const bp = makeBlueprint(level, { floors: 1 }, null, { activeUnit: '0.S' });
+    expect(bp.floors[0].rooms.map((r) => [r.ref, r.state, r.active])).toEqual([
+      ['0.S', 'building', true],
+      ['0.V', 'ghost', false],
     ]);
+    expect(bp.floors[0].roofed).toBe(false);
   });
 
-  it('제출 전에는 경고 표시가 없고, 제출 후 틀린 자리에 경고가 붙는다', () => {
-    const p = { '0-S': 'the-cat', '0-V': 'sleep' };
-    expect(makeBlueprint(level, p).warnings).toEqual([]);
-    const bp = makeBlueprint(level, p, scoreSentence(level, p));
-    expect(bp.warnings).toEqual([{ slot: '0-V', kind: 'check' }]);
-    expect(bp.success).toBe(false);
+  it('방 안의 부품: 복수면 가구 2개, 문패(관사), 동사 재질(시제)', () => {
+    const c = { floors: 1, '0.S.word': 'n:cat', '0.S.form': 'pl', '0.S.det': 'd:the', '0.V.word': 'v:sleep', '0.V.form': 'past' };
+    const bp = makeBlueprint(level, c);
+    expect(room(bp, '0.S')).toMatchObject({ word: 'cats', plural: true, det: 'the', state: 'done', text: 'the cats' });
+    expect(room(bp, '0.V')).toMatchObject({ word: 'slept', tense: 'past', state: 'done' });
+    expect(bp.floors[0].roofed).toBe(true); // 정답이 아니어도 다 지으면 지붕 (기획 결정 ①)
   });
 
-  it('필수 자리가 빈 채 제출하면 빈자리에 "없음" 경고가 붙는다', () => {
-    const p = { '0-V': 'sleeps' };
-    const bp = makeBlueprint(level, p, scoreSentence(level, p));
-    expect(bp.warnings).toEqual([{ slot: '0-S', kind: 'missing' }]);
-    expect(bp.completed).toBe(false);
+  it('형용사(카펫)와 관사 없음, 방은 문장 순서대로 놓인다', () => {
+    const bp = makeBlueprint(level7, answerChoices(level7));
+    expect(bp.floors[0].rooms.map((r) => r.ref)).toEqual(['0.S', '0.often', '0.V', '0.O']);
+    expect(room(bp, '0.O')).toMatchObject({ adj: 'warm', det: '' });
+    expect(room(bp, '0.often').kind).toBe('mod');
   });
 
-  it('정답을 제출하면 울타리(조건 충족)와 깃발(완공) 표시', () => {
-    const bp = makeBlueprint(level, catSleeps, scoreSentence(level, catSleeps));
-    expect(bp.conditionsMet).toBe(true);
-    expect(bp.completed).toBe(true);
-    expect(bp.success).toBe(true);
-  });
-
-  it('두 절 레벨은 2층 + 계단. 문장 맨 앞 접속사도 1층과 2층을 잇는다', () => {
-    const bp = makeBlueprint(level5, { L0: 'when' }, null, { activeSlot: 'L0' });
+  it('두 절 레벨: 2층 + 계단, 문장 맨 앞 접속사도 1층과 2층을 잇는다', () => {
+    const bp = makeBlueprint(level5, answerChoices(level5), null, { activeUnit: 'L1' });
     expect(bp.floors).toHaveLength(2);
-    expect(bp.floors[0].isTop).toBe(false); // 아래층은 처마 지붕
-    expect(bp.stairs).toEqual([{ from: 0, to: 1, key: 'L0', state: 'filled', word: 'when', active: true }]);
+    expect(bp.stairs).toEqual([{ ref: 'L1', from: 0, state: 'done', word: 'when', active: true, warn: false }]);
   });
 
-  it('층수가 다른 건물로 바뀌면 깃발을 새로 만든다 (메인 화면 깃발이 떠 있던 문제)', async () => {
+  it('제출 후 고칠 점이 있는 방에 경고, 완공이면 깃발·울타리·나무 표시', () => {
+    const wrong = { ...answerChoices(level), '0.V.form': 'base' };
+    const bp = makeBlueprint(level, wrong, scoreSentence(level, wrong));
+    expect(room(bp, '0.V').warn).toBe(true);
+    expect(bp.completed).toBe(true); // 75점
+    const right = answerChoices(level);
+    expect(makeBlueprint(level, right, scoreSentence(level, right)).success).toBe(true);
+  });
+
+  it('층수가 다른 견본 건물로 바뀌면 깃발을 새로 만든다 (메인 화면 깃발이 떠 있던 문제)', async () => {
     const { buildParts } = await import('../src/building/buildParts.js');
     const { SHOWCASE_BLUEPRINTS } = await import('../src/building/showcase.js');
-    const flagSig = (bp) => buildParts(bp, { labels: false }).parts.find((p) => p.key === 'flag')?.sig;
-    const withFlag = SHOWCASE_BLUEPRINTS.filter((bp) => bp.completed);
-    const sigs = withFlag.map(flagSig);
-    const floors = withFlag.map((bp) => bp.floors.length);
-    for (let i = 0; i < sigs.length; i += 1) {
-      for (let j = 0; j < sigs.length; j += 1) {
-        if (floors[i] !== floors[j]) expect(sigs[i]).not.toBe(sigs[j]);
-      }
-    }
+    const info = SHOWCASE_BLUEPRINTS.map((bp) => ({
+      floors: bp.floors.length,
+      sig: buildParts(bp, { labels: false }).parts.find((p) => p.key === 'flag')?.sig,
+    }));
+    expect(info.every((x) => x.sig)).toBe(true); // 모든 견본 건물에 깃발 (요청 8)
+    for (const a of info) for (const b of info) if (a.floors !== b.floors) expect(a.sig).not.toBe(b.sig);
   });
 });
