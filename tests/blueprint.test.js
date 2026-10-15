@@ -58,6 +58,21 @@ describe('건물 설계도', () => {
     expect(bp.floors[0].rooms).toEqual([{ role: 'O', state: 'filled' }]);
   });
 
+  it('층수가 다른 건물로 바뀌면 깃발을 새로 만든다 (메인 화면 깃발이 떠 있던 문제)', async () => {
+    const { buildParts } = await import('../src/building/buildParts.js');
+    const { SHOWCASE_BLUEPRINTS } = await import('../src/building/showcase.js');
+    const flagSig = (bp) => buildParts(bp, { labels: false }).parts.find((p) => p.key === 'flag')?.sig;
+    const withFlag = SHOWCASE_BLUEPRINTS.filter((bp) => bp.completed);
+    const sigs = withFlag.map(flagSig);
+    const floors = withFlag.map((bp) => bp.floors.length);
+    // 층수가 다르면 sig도 달라야 렌더러가 깃발을 새 높이로 다시 만든다
+    for (let i = 0; i < sigs.length; i += 1) {
+      for (let j = 0; j < sigs.length; j += 1) {
+        if (floors[i] !== floors[j]) expect(sigs[i]).not.toBe(sigs[j]);
+      }
+    }
+  });
+
   it('두 절이 필요한 레벨은 2층 + 접속사 계단 자리를 보여 준다', () => {
     const twoFloors = { ...level, structure: { clauses: [{ slots: ['S', 'V'] }, { slots: ['S', 'V'] }] } };
     const bp = makeBlueprint(twoFloors, ['the-cat', 'sleeps']);

@@ -235,14 +235,20 @@ export function buildParts(bp, { labels = true } = {}) {
 
   for (const w of bp.warnings) {
     const floor = bp.floors[w.floor];
-    add(`warn-${w.floor}-${w.role}`, w.kind, () => warning(w.floor, w.role, floor, w.kind));
+    // 목적어·보어 경고는 방 칸 배치에 따라 위치가 달라지므로 칸 목록도 sig에 넣는다
+    const rooms = floor.rooms.map((r) => r.role).join('');
+    add(`warn-${w.floor}-${w.role}`, `${w.kind}-${rooms}`, () => warning(w.floor, w.role, floor, w.kind));
   }
 
   const n = bp.floors.length;
   const top = floorY(n - 1) + H;
   const topFloorRoofed = bp.floors[n - 1].roomComplete;
   if (bp.conditionsMet) add('fence', 1, fence);
-  if (bp.completed) add('flag', topFloorRoofed ? 'roof' : 'flat', () => flag(topFloorRoofed ? top + 1.45 : top));
+  // 깃발 높이는 층수에 따라 달라지므로 sig에 층수를 넣는다.
+  // (넣지 않으면 메인 화면에서 집이 바뀔 때 깃발이 이전 집 높이에 그대로 남아 떠 있게 된다)
+  if (bp.completed) {
+    add('flag', `${n}-${topFloorRoofed ? 'roof' : 'flat'}`, () => flag(topFloorRoofed ? top + 1.45 : top));
+  }
 
   // 카메라가 건물 전체를 담을 수 있도록 대략적인 크기를 알려 준다.
   const height = top + 1.8;
