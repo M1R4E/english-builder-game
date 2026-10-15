@@ -5,7 +5,7 @@ import { BuildingRenderer } from '../building/BuildingRenderer.js';
 // 화면에 <div>를 하나 만들고, 그 안에 3D 렌더러를 붙인다.
 // 부품 목록(parts)이 바뀔 때마다 렌더러에 전달하고,
 // 화면에서 사라질 때는 렌더러를 정리(dispose)해서 메모리가 새지 않게 한다.
-export default function BuildingView({ parts, bounds }) {
+export default function BuildingView({ parts, bounds, insetTop = 0, insetBottom = 0 }) {
   const containerRef = useRef(null);
   const rendererRef = useRef(null);
   const [error, setError] = useState(false);
@@ -29,6 +29,11 @@ export default function BuildingView({ parts, bounds }) {
   useEffect(() => {
     rendererRef.current?.updateParts(parts, bounds);
   }, [parts, bounds, error]);
+
+  // 위·아래 판이 가리는 높이를 알려 주면, 건물이 가려지지 않은 공간 가운데에 보인다.
+  useEffect(() => {
+    rendererRef.current?.setInsets(insetTop, insetBottom);
+  }, [insetTop, insetBottom, error]);
 
   return (
     <div className="building-view" ref={containerRef}>

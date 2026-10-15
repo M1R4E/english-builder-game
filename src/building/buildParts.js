@@ -128,7 +128,7 @@ function stairs(from, state) {
 
 function warning(f, role, floor, kind) {
   const name = ROLE_LABELS[role] ?? '문장';
-  const text = kind === 'missing' ? `🚧 ${name} 없음` : `⚠ ${name} 확인`;
+  const text = kind === 'missing' ? `${name} 없음` : `! ${name} 확인`;
   const label = makeLabel(text, 'warn', 1);
   if (role === 'S' || role === 'V') {
     label.position.set(role === 'S' ? -W / 2 : W / 2, floorY(f) + H + 0.35, D / 2 + 0.55);
@@ -210,7 +210,7 @@ export function buildParts(bp) {
   const height = top + 1.8;
   const bounds = {
     center: new THREE.Vector3(0.2, height / 2, 0.4),
-    radius: 0.5 * Math.sqrt(8 ** 2 + height ** 2 + 6 ** 2),
+    radius: 0.5 * Math.sqrt(7 ** 2 + height ** 2 + 5 ** 2),
   };
 
   return { parts, bounds };

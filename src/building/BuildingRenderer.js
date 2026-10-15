@@ -24,6 +24,7 @@ export class BuildingRenderer {
     this.animations = []; // 등장 애니메이션 중인 부품 목록
     this.partMap = new Map(); // 지금 화면에 있는 부품: key → { sig, obj }
     this.bounds = null;
+    this.insets = { top: 0, bottom: 0 }; // 화면을 가리는 판의 높이(px)
 
     this.renderer = new THREE.WebGLRenderer({ antialias: !this.lowPower });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.lowPower ? 1.5 : 2));
@@ -128,14 +129,29 @@ export class BuildingRenderer {
     for (const key of [...this.partMap.keys()]) this.removePart(key);
   }
 
-  // 건물 크기에 맞춰 화면 안에 전부 들어오도록 카메라 거리를 정한다.
+  // 화면 위·아래를 가리는 판(상단 바, 하단 카드 판)의 높이(px)를 알려 준다.
+  // 건물은 가려지지 않은 가운데 공간에 맞춰 보이게 된다.
+  setInsets(top, bottom) {
+    if (this.insets.top === top && this.insets.bottom === bottom) return;
+    this.insets = { top, bottom };
+    this.resize();
+  }
+
+  // 가려지지 않은 공간의 높이 (너무 작아지지 않게 최소 30%는 보장)
+  visibleHeight(h) {
+    return Math.max(h - this.insets.top - this.insets.bottom, h * 0.3);
+  }
+
+  // 건물 크기에 맞춰 보이는 공간 안에 전부 들어오도록 카메라 거리를 정한다.
   fitCamera() {
     if (!this.bounds) return;
+    const { clientWidth: w, clientHeight: h } = this.container;
+    if (w === 0 || h === 0) return;
     const { center, radius } = this.bounds;
-    const fov = THREE.MathUtils.degToRad(this.camera.fov);
-    const fitHeight = radius / Math.sin(fov / 2);
-    const fitWidth = fitHeight / Math.min(this.camera.aspect, 1);
-    const distance = Math.max(fitHeight, fitWidth) * 1.05;
+    const t = Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2);
+    const vertical = Math.atan((t * this.visibleHeight(h)) / h); // 보이는 공간의 세로 반각
+    const horizontal = Math.atan(t * (w / h)); // 화면 가로 반각
+    const distance = (radius / Math.sin(Math.min(vertical, horizontal))) * 1.02;
     const dir = new THREE.Vector3(1, 0.75, 1.3).normalize();
     this.camera.position.copy(center).addScaledVector(dir, distance);
     this.controls.target.copy(center);
@@ -148,6 +164,11 @@ export class BuildingRenderer {
     if (w === 0 || h === 0) return;
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
+    // 화면 중심을 "가려지지 않은 공간의 중심"으로 옮긴다.
+    // (아래가 더 많이 가려지면 그만큼 장면을 위로 올려 그린다)
+    const top = this.insets.top;
+    const bottom = h - top - this.visibleHeight(h);
+    this.camera.setViewOffset(w, h, 0, Math.round((bottom - top) / 2), w, h);
     this.camera.updateProjectionMatrix();
     this.fitCamera();
   }

@@ -2,7 +2,7 @@ import { SCORE_WEIGHTS } from '../config.js';
 import { CHECK_TYPES } from './scoring.js';
 
 const ROLES = ['S', 'V', 'O', 'C', 'M', 'CONJ'];
-const REQUIRED_FIELDS = ['id', 'title', 'request', 'meaningKo', 'cards', 'structure', 'answers', 'checks', 'hints'];
+const REQUIRED_FIELDS = ['id', 'title', 'client', 'request', 'meaningKo', 'cards', 'structure', 'answers', 'checks', 'hints'];
 
 // 레벨 데이터에 빠진 값이나 잘못된 값이 있는지 검사한다.
 // 문제가 있으면 문제 설명 목록을 돌려준다 (문제가 없으면 빈 배열).

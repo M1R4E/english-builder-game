@@ -23,6 +23,7 @@ export default {
   title: '고양이의 낮잠 집',
   difficulty: 1,
   topic: '주어 + 동사',
+  client: '낮잠 좋아하는 고양이 씨',
   request: '고양이 한 마리를 위한 1층짜리 작은 집을 지어 주세요. 집의 기초가 될 문장은 "고양이는 잠을 잔다"예요.',
   meaningKo: '그 고양이(한 마리)는 잠을 잔다. — 평소에 늘 하는 일',
   conditions: [{ id: 'present', text: '평소에 하는 일이므로 현재 시제로 쓰기', checkId: 'C1' }],

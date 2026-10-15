@@ -25,27 +25,10 @@ export default function App() {
     });
   }, []);
 
-  return (
-    <div className="app">
-      <header className="topbar">
-        {level ? (
-          <button className="btn btn-ghost btn-small" type="button" onClick={() => setLevelId(null)}>
-            ◀ 레벨 목록
-          </button>
-        ) : (
-          <h1 className="logo">🏗️ 문장 건축가</h1>
-        )}
-        <button className="btn btn-ghost btn-small" type="button" disabled title="4단계에서 연결 예정">
-          ⚙️ 설정
-        </button>
-      </header>
-
-      {level ? (
-        // key를 레벨 번호로 주면, 레벨을 다시 열 때마다 새 판으로 시작한다.
-        <PlayScreen key={level.id} level={level} onExit={() => setLevelId(null)} onProgress={handleProgress} />
-      ) : (
-        <LevelSelect progress={progress} onSelect={setLevelId} />
-      )}
-    </div>
+  // key를 레벨 번호로 주면, 레벨을 다시 열 때마다 새 판으로 시작한다.
+  return level ? (
+    <PlayScreen key={level.id} level={level} onExit={() => setLevelId(null)} onProgress={handleProgress} />
+  ) : (
+    <LevelSelect progress={progress} onSelect={setLevelId} />
   );
 }
