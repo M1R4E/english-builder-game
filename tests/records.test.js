@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_LEVELS } from '../src/data/levels/index.js';
 import level from '../src/data/levels/level01.js';
-import { buildRecord, recommend, recordsToCsv } from '../src/game/records.js';
+import { buildRecord, recommend, recordsToCsv, summarize } from '../src/game/records.js';
 import { createSession, sessionReducer } from '../src/game/session.js';
 import {
   emptyData, loadData, mergeProgress, saveData, STORAGE_KEY, startNewPlayer, updatePlayer, upsertRecord, walletPoints,
@@ -134,5 +134,31 @@ describe('레벨 데이터: 생각해 보기·비교해 보기', () => {
     const bad = { ...level, selfExplain: { ...level.selfExplain, options: level.selfExplain.options.map((o) => ({ text: o.text })) } };
     expect(validateLevel(bad).join()).toMatch(/correct/);
     expect(validateLevel({ ...level, contrast: [{ sentence: 'x' }] }).join()).toMatch(/contrast/);
+  });
+});
+
+describe('결과 보고서', () => {
+  const levels = ALL_LEVELS.slice(0, 3);
+  const rec = (levelId, startedAt, o) => ({ levelId, startedAt, durationSec: 60, hintsUsed: 0, attempts: 1, ...o });
+
+  it('레벨마다 처음 판의 예상·첫 점수, 모든 판 중 최고 점수를 쓴다', () => {
+    const records = [
+      rec(1, 200, { prediction: 90, firstScore: 95, bestScore: 100, attempts: 1 }), // 두 번째 판
+      rec(1, 100, { prediction: 60, firstScore: 70, bestScore: 80, attempts: 3, hintsUsed: 2 }), // 처음 판
+      rec(2, 300, { prediction: 50, firstScore: 40, bestScore: 40 }),
+      rec(3, 400, { prediction: 50, firstScore: null, bestScore: null, durationSec: null }), // 열기만 함
+    ];
+    const progress = { 1: { completed: true, stars: 5 }, 2: { completed: false } };
+    const s = summarize(levels, progress, records);
+    expect(s.rows[0]).toMatchObject({ prediction: 60, firstScore: 70, bestScore: 100, attempts: 3, hints: 2, completed: true, stars: 5 });
+    expect(s.rows[1]).toMatchObject({ firstScore: 40, completed: false });
+    expect(s.rows[2]).toMatchObject({ firstScore: null, bestScore: null, attempts: null });
+    expect(s).toMatchObject({ completedCount: 1, allCompleted: false, playedCount: 2, avgFirst: 55, avgPrediction: 55, avgEstimateGap: 10, totalHints: 2, totalSec: 180 });
+  });
+
+  it('모두 완공하면 최종, 아무것도 안 했으면 평균은 비어 있다', () => {
+    const all = Object.fromEntries(levels.map((l) => [l.id, { completed: true, stars: 3 }]));
+    expect(summarize(levels, all, []).allCompleted).toBe(true);
+    expect(summarize(levels, {}, [])).toMatchObject({ allCompleted: false, playedCount: 0, avgFirst: null, totalSec: 0 });
   });
 });

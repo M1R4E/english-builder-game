@@ -119,3 +119,38 @@ export function recordsToCsv(players) {
   // 엑셀에서 한글이 깨지지 않도록 맨 앞에 BOM을 붙인다
   return `﻿${rows.join('\r\n')}`;
 }
+
+// ── 결과 보고서 (체험이 끝나면 학생이 화면을 캡처해 설문지에 첨부) ──
+// 레벨마다 "처음 플레이한 판"의 예상·첫 점수·제출 횟수·힌트를 보여 준다. (처음 도전한 실력이 연구에 가장 쓸모 있다)
+// 최고 점수는 그 레벨의 모든 판 중 가장 높은 점수. 아직 제출하지 않은 레벨은 null.
+export function summarize(levels, progress, records) {
+  const rows = levels.map((level) => {
+    const plays = records.filter((r) => r.levelId === level.id && r.firstScore !== null);
+    const first = [...plays].sort((a, b) => (a.startedAt ?? 0) - (b.startedAt ?? 0))[0] ?? null;
+    return {
+      levelId: level.id,
+      prediction: first?.prediction ?? null,
+      firstScore: first?.firstScore ?? null,
+      bestScore: plays.length ? Math.max(...plays.map((r) => r.bestScore)) : null,
+      attempts: first?.attempts ?? null,
+      hints: first?.hintsUsed ?? null,
+      completed: Boolean(progress[level.id]?.completed),
+      stars: progress[level.id]?.stars ?? 0,
+    };
+  });
+  const played = rows.filter((r) => r.firstScore !== null);
+  const avg = (list) => (list.length ? Math.round(list.reduce((s, x) => s + x, 0) / list.length) : null);
+  return {
+    rows,
+    total: levels.length,
+    completedCount: rows.filter((r) => r.completed).length,
+    allCompleted: rows.every((r) => r.completed),
+    playedCount: played.length,
+    avgPrediction: avg(played.map((r) => r.prediction)),
+    avgFirst: avg(played.map((r) => r.firstScore)),
+    // 예상이 실제와 얼마나 가까웠는지 (메타인지): |예상 − 첫 점수|의 평균. 작을수록 정확
+    avgEstimateGap: avg(played.map((r) => Math.abs(r.prediction - r.firstScore))),
+    totalHints: played.reduce((s, r) => s + r.hints, 0),
+    totalSec: records.reduce((s, r) => s + (r.durationSec ?? 0), 0),
+  };
+}

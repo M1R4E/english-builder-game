@@ -143,10 +143,11 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start; /* center로 하면 내용이 화면보다 길 때 위쪽이 잘려 스크롤로도 못 본다 → 아래 margin auto로 가운데 */
   padding: 64px 16px 32px;
   background: rgba(244, 239, 230, 0.45);
 }
+.mailbox-screen > .mailbox-closed-wrap, .mailbox-screen > .mailbox-open { margin-block: auto; }
 .mailbox-closed-wrap { display: flex; flex-direction: column; align-items: center; gap: 18px; }
 .tap-hint {
   margin: 0;
@@ -1264,3 +1265,32 @@ body {
 /* 점검 보고서 연출 중: 누르면 빨리 감기 */
 .report-body.is-playing { cursor: pointer; }
 .fast-hint { margin-right: auto; align-self: center; }
+
+/* ===== 결과 보고서 (캡처해서 설문지에 첨부) — 휴대폰 한 화면에 스크롤 없이 ===== */
+.summary-window { width: min(520px, 100%); padding: 18px 16px 14px; }
+.summary-window .window-title { margin-bottom: 4px; }
+.summary-cta { margin: 0 0 10px; color: var(--ink); font-size: 0.95rem; }
+.summary-totals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 0 0 10px; }
+.summary-totals div { padding: 6px 8px; border-radius: 10px; background: #f7f2ea; }
+.summary-totals dt { font-family: var(--font-text); font-size: 0.72rem; color: var(--muted); }
+.summary-totals dd { margin: 2px 0 0; font-size: 0.95rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.summary-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 0.9rem; }
+.summary-table th { font-family: var(--font-text); font-size: 0.72rem; font-weight: 700; color: var(--muted); padding: 4px 2px; border-bottom: 2px solid var(--line); }
+.summary-table td { text-align: center; padding: 3px 2px; border-bottom: 1px solid var(--line); }
+.summary-table tr.is-empty td { color: var(--muted); }
+.summary-foot { margin: 8px 0 0; font-family: var(--font-text); font-size: 0.72rem; color: var(--muted); }
+.summary-window .window-actions { margin-top: 8px; }
+.summary-totals dt { white-space: nowrap; }
+/* 키가 작은 휴대폰: 더 촘촘하게 (캡처 한 장에 다 들어가게) */
+@media (max-height: 700px) {
+  .summary-window { padding: 12px 12px 10px; }
+  .summary-cta { margin-bottom: 6px; }
+  .summary-totals { gap: 4px; margin-bottom: 6px; }
+  .summary-totals div { padding: 3px 6px; }
+  .summary-table td { padding: 1px 2px; }
+  .summary-window .window-actions { margin-top: 4px; }
+}
+.mailbox-open-head .summary-open { margin-left: auto; margin-right: 10px; min-height: 36px; padding: 4px 12px; font-size: 0.85rem; }
+@media (pointer: coarse) {
+  .mailbox-open-head .summary-open { min-height: 44px; }
+}

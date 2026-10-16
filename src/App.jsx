@@ -2,13 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Mailbox from './components/Mailbox.jsx';
 import PlayScreen from './components/PlayScreen.jsx';
 import SettingsWindow from './components/SettingsWindow.jsx';
+import SummaryWindow from './components/SummaryWindow.jsx';
 import SurveyWindow from './components/SurveyWindow.jsx';
 import ShowcaseBackground from './components/ShowcaseBackground.jsx';
 import TitleScreen from './components/TitleScreen.jsx';
 import { findLevel, LEVELS } from './data/levels/index.js';
 import { SURVEY } from './data/survey.js';
 import { pickNextLevel } from './game/progress.js';
-import { recommend, recordsToCsv } from './game/records.js';
+import { recommend, recordsToCsv, summarize } from './game/records.js';
 import { loadData, mergeProgress, saveData, startNewPlayer, updatePlayer, upsertRecord, walletPoints } from './game/storage.js';
 
 // 고장 나지 않은(데이터 검사를 통과한) 레벨만
@@ -39,6 +40,7 @@ export default function App() {
   const [playKey, setPlayKey] = useState(0); // 레벨을 열 때마다 새 판
   const [playId, setPlayId] = useState(null); // 학습 기록 하나를 구분하는 번호 (레벨을 열 때마다 새로)
   const [alreadyPerfect, setAlreadyPerfect] = useState(false); // 이미 완벽하게 지은 레벨을 다시 하는 중인지
+  const [summaryOpen, setSummaryOpen] = useState(false); // 결과 보고서 (우편함의 버튼으로 연 경우)
 
   // 바뀔 때마다 저장
   useEffect(() => {
@@ -91,6 +93,14 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [level?.id, progress],
   );
+  // 결과 보고서: 레벨을 모두 완공하고 우편함으로 돌아오면 한 번 자동으로 뜬다. 그 전에도 버튼으로 볼 수 있다.
+  const summary = useMemo(() => summarize(PLAYABLE, progress, records), [progress, records]);
+  const autoSummary = screen === 'mailbox' && summary.allCompleted && !player.summarySeen;
+  const closeSummary = () => {
+    setSummaryOpen(false);
+    if (autoSummary) setData((d) => updatePlayer(d, (pl) => ({ ...pl, summarySeen: true })));
+  };
+
   const recommendation = useMemo(() => recommend(PLAYABLE, progress, records), [progress, records]);
 
   const settingsWindow = settingsOpen && (
@@ -153,7 +163,11 @@ export default function App() {
           onBack={() => setScreen('title')}
           onSelect={openLevel}
           onSettings={() => setSettingsOpen(true)}
+          onSummary={summary.playedCount > 0 ? () => setSummaryOpen(true) : null}
         />
+      )}
+      {(summaryOpen || autoSummary) && (
+        <SummaryWindow summary={summary} player={data.currentPlayer} wallet={walletPoints(progress)} onClose={closeSummary} />
       )}
       {settingsWindow}
       {needPreSurvey && (

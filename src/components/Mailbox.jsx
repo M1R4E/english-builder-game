@@ -27,6 +27,7 @@ export default function Mailbox({
   onSelect,
   onBack,
   onSettings,
+  onSummary = null,
 }) {
   const [state, setState] = useState(startOpen ? 'open' : 'closed'); // closed → opening → open
   const [picked, setPicked] = useState(null);
@@ -88,6 +89,11 @@ export default function Mailbox({
         >
           <header className="mailbox-open-head">
             <span className="mailbox-open-title">우편함</span>
+            {onSummary && (
+              <button type="button" className="btn btn-primary summary-open" onClick={onSummary}>
+                결과 보고서
+              </button>
+            )}
             <span className="muted small">주문서 {visible.length}통</span>
           </header>
           {recommendation && (
