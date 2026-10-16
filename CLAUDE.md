@@ -36,9 +36,9 @@ React + Vite + Three.js, 오프라인(PWA) 실행이 목표이고, 게임 실행
   - 공정 순서: 층수 → 1층 필수 방 → 1층 장식 방 → 계단 → 2층 … (`game/structure.js`). 단어는 `data/lexicon.js` 사전에서 고른다.
   - 채점: 관사·수·형태·수 일치·품사는 자동 검사(`game/scoring.js`), 의미·특별 요청은 레벨 데이터에 적는다. 레벨 작성법은 `level01.js` 맨 위 주석.
   - 레벨 해금·다음 레벨: `game/progress.js`. 저장: `game/storage.js`(localStorage), 학습 기록·추천·CSV: `game/records.js`.
-- 4단계, 5단계(반응형), 6단계(오프라인 PWA: 빌드에서만 서비스 워커, `src/offline.js`, 아이콘 `scripts/make-icons.mjs`)까지 완료(2026-10-16). 다음: 7단계(배포).
+- 1~7단계 모두 완료(2026-10-16). 배포 주소 https://m1r4e.github.io/english-builder-game/ (main에 push하면 GitHub Actions가 테스트 후 자동 배포). 전시 절차: `docs/전시용_실행절차.md`.
 - 테스트: `tests/levels.test.js`(레벨별 한 단계 변경 전수 + 무작위 3,000채), `tests/game.test.js`, `tests/blueprint.test.js`
-- 다음: 7단계(GitHub Pages 배포, 실제 주소에서 오프라인·모바일 확인)
+- 다음: 사용자 피드백, 영어 선생님 검토, 실제 전시 기기에서 확인
 - 미뤄 둔 일
   - 설문 문항은 사용자가 정해 `src/data/survey.js`에 넣고 enabled를 켠다
 
