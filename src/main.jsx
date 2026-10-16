@@ -6,6 +6,7 @@ import { createRoot } from 'react-dom/client';
 import '@fontsource/jua';
 import '@fontsource/gowun-dodum';
 import App from './App.jsx';
+import { setupOffline } from './offline.js';
 import './styles/app.css';
 
 // 3D 표지판은 캔버스에 글자를 그려서 만들기 때문에, 그리기 전에 글꼴이 준비되어 있어야 한다.
@@ -14,6 +15,9 @@ const LABEL_CHARS = '주어동사목적어보어수식어접속사확인없음�
 const fontsReady = document.fonts
   ? document.fonts.load('44px "Jua"', LABEL_CHARS).catch(() => {})
   : Promise.resolve();
+
+// 인터넷이 끊겨도 실행되도록 게임 파일을 브라우저에 저장해 둔다 (배포용 빌드에서만)
+setupOffline();
 
 Promise.race([fontsReady, new Promise((r) => setTimeout(r, 1500))]).then(() => {
   createRoot(document.getElementById('root')).render(

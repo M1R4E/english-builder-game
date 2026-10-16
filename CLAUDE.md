@@ -36,12 +36,13 @@ React + Vite + Three.js, 오프라인(PWA) 실행이 목표이고, 게임 실행
   - 공정 순서: 층수 → 1층 필수 방 → 1층 장식 방 → 계단 → 2층 … (`game/structure.js`). 단어는 `data/lexicon.js` 사전에서 고른다.
   - 채점: 관사·수·형태·수 일치·품사는 자동 검사(`game/scoring.js`), 의미·특별 요청은 레벨 데이터에 적는다. 레벨 작성법은 `level01.js` 맨 위 주석.
   - 레벨 해금·다음 레벨: `game/progress.js`. 저장: `game/storage.js`(localStorage), 학습 기록·추천·CSV: `game/records.js`.
-- 4단계와 4단계 보완, 5단계(반응형 카드 판·터치 크기·작은 화면 이름표·풍경·화면 전환)까지 완료(2026-10-16). 다음: 6단계(오프라인 PWA).
+- 4단계, 5단계(반응형), 6단계(오프라인 PWA: 빌드에서만 서비스 워커, `src/offline.js`, 아이콘 `scripts/make-icons.mjs`)까지 완료(2026-10-16). 다음: 7단계(배포).
 - 테스트: `tests/levels.test.js`(레벨별 한 단계 변경 전수 + 무작위 3,000채), `tests/game.test.js`, `tests/blueprint.test.js`
-- 다음: 6단계(오프라인 PWA), 7단계(배포)
+- 다음: 7단계(GitHub Pages 배포, 실제 주소에서 오프라인·모바일 확인)
 - 미뤄 둔 일
   - 설문 문항은 사용자가 정해 `src/data/survey.js`에 넣고 enabled를 켠다
 
 ## 알려진 환경 문제
 - Windows에서 파일을 빠르게 연달아 고치면 Vite가 변경을 놓치는 일이 있어 `vite.config.js`에서 polling을 켜 두었다.
 - 브라우저 콘솔에 남은 예전 오류와 새 오류를 구분하려면 새 탭에서 확인한다.
+- 오프라인(PWA) 확인: Claude 앱 미리보기 브라우저는 서비스 워커를 지원하지 않는다. `npm.cmd run preview` 후 Edge/Chrome에서 확인한다.

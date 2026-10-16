@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { getOfflineStatus, onOfflineStatus } from '../offline.js';
 import { DIFFICULTIES } from '../game/storage.js';
 import Window from './Window.jsx';
 
@@ -12,8 +13,22 @@ const HELP_TEXT = {
   hard: '문법 설명과 안내를 숨겨요. 힌트는 언제든 쓸 수 있어요.',
 };
 
+// 오프라인 준비 상태 (진행자용 확인)
+const OFFLINE_TEXT = {
+  ready: ['ok', '준비됨', '게임 파일을 이 기기에 저장해 두었어요. 인터넷이 끊겨도 실행돼요.'],
+  preparing: ['warn', '준비 중', '게임 파일을 저장하고 있어요. 인터넷이 연결된 상태로 잠시 기다려 주세요.'],
+  unsupported: ['mute', '꺼짐', '개발 서버나 이 브라우저에서는 오프라인 기능을 쓰지 않아요. 배포한 주소에서 확인하세요.'],
+};
+
+function useOfflineStatus() {
+  const [status, setStatus] = useState(getOfflineStatus);
+  useEffect(() => onOfflineStatus(setStatus), []);
+  return status;
+}
+
 export default function SettingsWindow({ settings, onChange, onClose, player, onNewPlayer, onExport, onPostSurvey }) {
   const [confirming, setConfirming] = useState(false);
+  const offline = OFFLINE_TEXT[useOfflineStatus()];
 
   const setDifficulty = (difficulty) =>
     onChange({ ...settings, difficulty, showMeanings: DIFFICULTIES[difficulty].showMeanings });
@@ -59,6 +74,9 @@ export default function SettingsWindow({ settings, onChange, onClose, player, on
           <h3>진행자용</h3>
           <p className="settings-help">
             지금 체험자: <b>{player}</b> (이름 같은 개인 정보는 저장하지 않아요)
+          </p>
+          <p className="settings-help">
+            오프라인 사용: <span className={`state-tag ${offline[0]}`}>{offline[1]}</span> {offline[2]}
           </p>
           <div className="settings-actions">
             {confirming ? (
