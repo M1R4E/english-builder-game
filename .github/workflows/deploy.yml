@@ -1,0 +1,47 @@
+# GitHub Pages 자동 배포
+# main 브랜치에 올릴(push) 때마다: 자동 테스트 → 배포용 빌드 → GitHub Pages에 공개
+# 테스트가 하나라도 실패하면 배포하지 않는다 (고장 난 게임이 올라가지 않도록).
+# 저장소 설정 Settings → Pages → Build and deployment → Source를 "GitHub Actions"로 해 두어야 한다.
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # GitHub 웹사이트의 Actions 탭에서 손으로 다시 실행할 수도 있다
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 여러 번 연달아 올려도 배포가 겹치지 않게 한 번에 하나씩
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
