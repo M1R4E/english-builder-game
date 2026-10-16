@@ -111,14 +111,23 @@ export default function ResultWindow({
 
   const [stage, setStage] = useState(() => (reduceMotion() || skipIntro ? LAST : 0));
   const [skipped, setSkipped] = useState(() => reduceMotion() || skipIntro);
+  // 단계를 하나씩 이어서 진행한다. (times[i]는 i+1단계가 시작되는 시각)
+  // 한 단계가 시작된 뒤 다음 단계까지 기다리는 시간 = 두 시각의 차이
   useEffect(() => {
-    if (skipped) return undefined;
-    const timers = times.map((t, i) => setTimeout(() => setStage((s) => Math.max(s, i + 1)), t));
-    return () => timers.forEach(clearTimeout);
-  }, [times, skipped]);
+    if (skipped || stage >= LAST) return undefined;
+    const wait = stage === 0 ? times[0] : times[stage] - times[stage - 1];
+    const timer = setTimeout(() => setStage((s) => (s === stage ? s + 1 : s)), wait);
+    return () => clearTimeout(timer);
+  }, [stage, skipped, times, LAST]);
   const skip = () => {
     setSkipped(true);
     setStage(LAST);
+  };
+  // 빨리 감기: 연출 중에 보고서를 누르면 다음 단계로 바로 넘어가고, 그 뒤 단계는 거기서부터 이어진다.
+  // (버튼을 누른 것은 빼고)
+  const fastForward = (e) => {
+    if (stage >= LAST || e.target.closest('button, input, a')) return;
+    setStage((s) => Math.min(LAST, s + 1));
   };
   const shown = (k) => (stage >= k ? ' is-shown' : '');
 
@@ -128,6 +137,8 @@ export default function ResultWindow({
   return (
     <Window title="점검 보고서" onClose={closeAction} className="result-window">
       {fireworks && <Fireworks />}
+      {/* 연출 중에는 보고서 어디를 눌러도 빨리 감기 */}
+      <div className={`report-body${stage < LAST ? ' is-playing' : ''}`} onClick={fastForward}>
 
       <section className="report-summary">
         <p className={`result-title reveal${shown(1)}`}>{headlineOf(result.total, result.perfect, reward.completed)}</p>
@@ -276,8 +287,11 @@ export default function ResultWindow({
         />
       )}
 
+      </div>
+
       {stage < LAST ? (
         <div className="window-actions">
+          <span className="muted small fast-hint">보고서를 누르면 빨리 넘어가요</span>
           <button type="button" className="btn btn-ghost btn-small" onClick={skip}>
             바로 보기
           </button>
