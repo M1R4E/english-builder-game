@@ -16,6 +16,7 @@ import IconButton from './IconButton.jsx';
 import { IconBulb, IconGear, IconMailbox, IconTrash, IconUndo } from './Icons.jsx';
 import OrderSheet from './OrderSheet.jsx';
 import OrderSlip from './OrderSlip.jsx';
+import OrderSummary from './OrderSummary.jsx';
 import ProgressBar from './ProgressBar.jsx';
 import ResultWindow from './ResultWindow.jsx';
 import SettingsWindow from './SettingsWindow.jsx';
@@ -78,6 +79,7 @@ function useDockDrag(dockHeight) {
 export default function PlayScreen({
   level,
   playId,
+  alreadyPerfect = false,
   settings = DEFAULT_SETTINGS,
   onSettingsChange,
   onExit,
@@ -89,6 +91,10 @@ export default function PlayScreen({
   const [state, dispatch] = useReducer(sessionReducer, level, createSession);
   const [orderOpen, setOrderOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // 주문 요약 메모를 펼쳐 둘지 (작은 화면에서는 처음에 접어 둔다). 결과 창을 다녀와도 그대로 유지한다.
+  const [summaryOpen, setSummaryOpen] = useState(() => window.innerWidth > 600);
+  const [viewing, setViewing] = useState(false); // 건물 다시 보기 (결과 창을 잠시 닫고 건물만 보기)
+  const [viewedFor, setViewedFor] = useState(0); // 몇 번째 제출 결과에서 건물 다시 보기를 했는지
   const [viewedAnswer, setViewedAnswer] = useState(false); // 정답 예시를 봤는지 (기록용, 감점 없음)
   const [selfExplain, setSelfExplain] = useState(null); // 자기 설명 답 { choice, correct }
   const easy = settings.difficulty === 'easy';
@@ -119,13 +125,15 @@ export default function PlayScreen({
   const lastAttempt = state.attempts[state.attempts.length - 1];
 
   useEffect(() => {
-    if (reward) onProgress(level.id, { completed: reward.completed, stars: reward.stars, finalPay: reward.finalPay });
+    if (reward) {
+      onProgress(level.id, { completed: reward.completed, stars: reward.stars, finalPay: reward.finalPay, perfect: reward.best === 100 });
+    }
   }, [reward, level.id, onProgress]);
 
   // 학습 기록: 제출할 때마다, 정답 예시를 보거나 자기 설명에 답할 때마다 저장한다
   useEffect(() => {
     if (state.attempts.length === 0 || !onRecord) return;
-    onRecord(buildRecord(level, state, { playId, difficulty: settings.difficulty, viewedAnswer, selfExplain }));
+    onRecord(buildRecord(level, state, { playId, difficulty: settings.difficulty, viewedAnswer, selfExplain, alreadyPerfect }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.attempts.length, viewedAnswer, selfExplain]);
 
@@ -168,7 +176,7 @@ export default function PlayScreen({
     if (state.hintStep < hintMax) dispatch({ type: 'HINT', maxSteps: hintMax });
     setHintOpen(true);
   };
-  const visibleDock = building ? Math.max(dockHeight - dock.offset, 0) : 0;
+  const visibleDock = building ? Math.max(dockHeight - dock.offset, 0) : viewing ? 110 : 0;
   const preview = sentenceText(level, state.choices);
 
   return (
@@ -194,6 +202,9 @@ export default function PlayScreen({
         </div>
       </header>
       {state.phase !== 'predict' && <OrderSlip onClick={() => setOrderOpen(true)} />}
+      {building && (
+        <OrderSummary level={level} result={lastAttempt?.result} open={summaryOpen} onToggle={() => setSummaryOpen((o) => !o)} />
+      )}
 
       <Toast toast={toast} onDone={clearToast} />
 
@@ -274,9 +285,13 @@ export default function PlayScreen({
         <OrderSheet
           level={level}
           mode="accept"
+          alreadyPerfect={alreadyPerfect}
           prediction={state.prediction}
           onPredictionChange={(value) => dispatch({ type: 'SET_PREDICTION', value })}
-          onAccept={() => dispatch({ type: 'START', now: Date.now() })}
+          onAccept={() => {
+            dispatch({ type: 'START', now: Date.now() });
+            if (alreadyPerfect) say('이미 완공한 건물이에요. 이번 공사는 연습이라 공사 대금은 받지 않아요.');
+          }}
         />
       )}
 
@@ -295,7 +310,20 @@ export default function PlayScreen({
       {state.phase === 'result' && celebrating && <CompletionCelebration onDone={endCelebration} />}
 
       {/* 창: 점검 보고서 (제출 결과) */}
-      {state.phase === 'result' && !celebrating && !orderOpen && (
+      {/* 건물 다시 보기: 카드 판 없이 건물과 내가 만든 문장만. 구석의 버튼으로 결과 창에 돌아간다 */}
+      {state.phase === 'result' && viewing && (
+        <>
+          <button type="button" className="btn btn-primary back-to-result" onClick={() => setViewing(false)}>
+            ◀ 결과 화면으로 돌아가기
+          </button>
+          <p className="view-sentence">
+            <span className="view-sentence-label">내가 지은 문장</span>
+            {sentenceText(level, lastAttempt.choices)}
+          </p>
+        </>
+      )}
+
+      {state.phase === 'result' && !celebrating && !orderOpen && !viewing && (
         <ResultWindow
           key={state.attempts.length} // 제출할 때마다 연출을 처음부터 다시
           level={level}
@@ -308,6 +336,12 @@ export default function PlayScreen({
           onViewAnswer={() => setViewedAnswer(true)}
           selfExplain={selfExplain}
           onSelfExplain={setSelfExplain}
+          alreadyPerfect={alreadyPerfect}
+          onViewBuilding={() => {
+            setViewedFor(state.attempts.length);
+            setViewing(true);
+          }}
+          skipIntro={viewedFor === state.attempts.length}
           nextLevel={nextLevel}
           onNext={onNext}
         />

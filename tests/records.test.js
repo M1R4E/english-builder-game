@@ -4,7 +4,7 @@ import level from '../src/data/levels/level01.js';
 import { buildRecord, recommend, recordsToCsv } from '../src/game/records.js';
 import { createSession, sessionReducer } from '../src/game/session.js';
 import {
-  emptyData, loadData, saveData, STORAGE_KEY, startNewPlayer, updatePlayer, upsertRecord, walletPoints,
+  emptyData, loadData, mergeProgress, saveData, STORAGE_KEY, startNewPlayer, updatePlayer, upsertRecord, walletPoints,
 } from '../src/game/storage.js';
 import { validateLevel } from '../src/game/validateLevel.js';
 
@@ -48,6 +48,17 @@ describe('브라우저 저장소', () => {
     p = upsertRecord(p, { playId: 'a', bestScore: 90 });
     p = upsertRecord(p, { playId: 'b', bestScore: 70 });
     expect(p.records.map((r) => [r.playId, r.bestScore])).toEqual([['a', 90], ['b', 70]]);
+  });
+
+  it('진행 상황 합치기: 더 좋은 기록만 남기고, 이미 완벽하게 지은 레벨은 다시 해도 공사 대금이 바뀌지 않는다', () => {
+    let p = mergeProgress({}, { completed: true, stars: 2, finalPay: 77, perfect: false });
+    expect(p).toMatchObject({ completed: true, stars: 2, bestPay: 77, perfect: false });
+    p = mergeProgress(p, { completed: true, stars: 1, finalPay: 70, perfect: false });
+    expect(p.bestPay).toBe(77); // 더 낮으면 그대로
+    p = mergeProgress(p, { completed: true, stars: 5, finalPay: 92, perfect: true });
+    expect(p).toMatchObject({ stars: 5, bestPay: 92, perfect: true }); // 늘어난 15만큼만 지갑에 더해진다
+    p = mergeProgress(p, { completed: true, stars: 5, finalPay: 100, perfect: true });
+    expect(p.bestPay).toBe(92); // 완벽하게 지은 뒤에는 다시 해도 그대로 (반복해서 돈을 벌 수 없음)
   });
 
   it('지갑은 레벨마다 가장 많이 받은 최종 공사 대금의 합', () => {

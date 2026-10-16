@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CATEGORY_LABELS, ESTIMATE_PENALTY_RATE, ESTIMATE_TOLERANCE, FIREWORKS_THRESHOLD, MAX_STARS } from '../config.js';
+import {
+  CATEGORY_LABELS, ESTIMATE_PENALTY_RATE, ESTIMATE_TOLERANCE, FIREWORKS_THRESHOLD, MAX_STARS, RETRY_PAY_RATE,
+} from '../config.js';
 import { sentenceText } from '../game/structure.js';
 import { formatWon, MAX_WON, toWon, wonText } from '../game/money.js';
 import Fireworks from './Fireworks.jsx';
@@ -68,8 +70,13 @@ export default function ResultWindow({
   onViewAnswer,
   selfExplain,
   onSelfExplain,
+  alreadyPerfect = false,
+  onViewBuilding,
+  skipIntro = false, // 건물 다시 보기에서 돌아올 때는 연출 없이 바로
 }) {
   const { result } = attempt;
+  // 완벽하게 지었으면 더 고칠 것이 없으므로 "건물 다시 보기"(건물만 보여 주는 화면), 아니면 "확인하고 고치기"
+  const closeAction = result.perfect && onViewBuilding ? onViewBuilding : onEdit;
   const sentence = sentenceText(level, attempt.choices);
 
   // 고칠 점을 먼저, 그다음 통과 항목을 보여 준다.
@@ -102,8 +109,8 @@ export default function ResultWindow({
   }, [reward.stars, listItems]);
   const LAST = times.length;
 
-  const [stage, setStage] = useState(() => (reduceMotion() ? LAST : 0));
-  const [skipped, setSkipped] = useState(() => reduceMotion());
+  const [stage, setStage] = useState(() => (reduceMotion() || skipIntro ? LAST : 0));
+  const [skipped, setSkipped] = useState(() => reduceMotion() || skipIntro);
   useEffect(() => {
     if (skipped) return undefined;
     const timers = times.map((t, i) => setTimeout(() => setStage((s) => Math.max(s, i + 1)), t));
@@ -119,7 +126,7 @@ export default function ResultWindow({
   const fireworks = stage >= 4 && result.total >= FIREWORKS_THRESHOLD;
 
   return (
-    <Window title="점검 보고서" onClose={onEdit} className="result-window">
+    <Window title="점검 보고서" onClose={closeAction} className="result-window">
       {fireworks && <Fireworks />}
 
       <section className="report-summary">
@@ -216,29 +223,43 @@ export default function ResultWindow({
         </p>
       </section>
 
-      {/* 최종 공사 대금 = 최고 청구 금액 − 견적 오차 차감 */}
+      {/* 최종 공사 대금 = 첫 청구 금액 + 고쳐서 늘어난 금액의 일부 − 견적 오차 차감 */}
       <section className={`report-section pay reveal-list${shown(8)}`}>
         <h3>최종 공사 대금</h3>
         <ul className="pay-lines">
           <li style={{ '--i': 0 }}>
-            <span>{attemptCount > 1 ? '가장 높은 청구 금액' : '청구 금액'}</span>
-            <b className="pay-amount">{wonText(reward.best)}</b>
+            <span>첫 청구 금액</span>
+            <b className="pay-amount">{wonText(reward.first)}</b>
           </li>
-          <li style={{ '--i': 1 }} className={reward.estimatePenalty > 0 ? 'has-penalty' : ''}>
+          {reward.best > reward.first && (
+            <li style={{ '--i': 1 }}>
+              <span>
+                고쳐서 늘어난 금액 ({wonText(reward.best - reward.first)}의 {Math.round(RETRY_PAY_RATE * 100)}%)
+              </span>
+              <b className="pay-amount">+{wonText(reward.retryGain)}</b>
+            </li>
+          )}
+          <li style={{ '--i': 2 }} className={reward.estimatePenalty > 0 ? 'has-penalty' : ''}>
             <span>견적 오차 차감</span>
             <b className="pay-amount">
               {reward.estimatePenalty > 0 ? `−${wonText(reward.estimatePenalty)}` : '차감 없음'}
             </b>
           </li>
-          <li style={{ '--i': 2 }} className="pay-total">
+          <li style={{ '--i': 3 }} className={`pay-total${alreadyPerfect ? ' is-unpaid' : ''}`}>
             <span>최종 공사 대금</span>
             <b className="pay-amount">{wonText(reward.finalPay)}</b>
           </li>
         </ul>
-        <p className="muted small" style={{ '--i': 3 }}>
-          견적이 첫 청구 금액보다 {wonText(ESTIMATE_TOLERANCE)} 넘게 높으면, 넘은 금액의{' '}
-          {Math.round(ESTIMATE_PENALTY_RATE * 100)}%를 공사 대금에서 빼요(1,000원 미만은 빼지 않아요). 문장
-          점수(청구 금액)와 별 개수에는 영향을 주지 않아요.
+        {alreadyPerfect && (
+          <p className="pay-notice" style={{ '--i': 4 }}>
+            <span className="state-tag warn">이미 완공한 건물</span> 이 건물은 전에 완벽하게 완공해서 공사 대금을 이미
+            받았어요. 이번 공사는 연습이라 지갑에 더해지지 않아요.
+          </p>
+        )}
+        <p className="muted small" style={{ '--i': 5 }}>
+          고쳐서 다시 제출하면 늘어난 금액의 {Math.round(RETRY_PAY_RATE * 100)}%를 더 받아요. 견적이 첫 청구 금액보다{' '}
+          {wonText(ESTIMATE_TOLERANCE)} 넘게 높으면, 넘은 금액의 {Math.round(ESTIMATE_PENALTY_RATE * 100)}%를 빼요(1,000원
+          미만은 빼지 않아요). 문장 점수(청구 금액)와 별 개수에는 영향을 주지 않아요.
         </p>
       </section>
 
@@ -266,7 +287,7 @@ export default function ResultWindow({
           <button type="button" className="btn btn-ghost" onClick={onExit}>
             우편함으로
           </button>
-          <button type="button" className={`btn ${nextLevel && reward.completed ? 'btn-ghost' : 'btn-primary'}`} onClick={onEdit}>
+          <button type="button" className={`btn ${nextLevel && reward.completed ? 'btn-ghost' : 'btn-primary'}`} onClick={closeAction}>
             {result.perfect ? '건물 다시 보기' : '확인하고 고치기'}
           </button>
           {nextLevel && (

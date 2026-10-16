@@ -77,6 +77,20 @@ export function upsertRecord(player, record) {
   return { ...player, records: [...others, record] };
 }
 
+// 레벨 진행 상황 합치기: 별·완공·최고 공사 대금은 더 좋은 기록만 남긴다.
+//  perfect: 한 번이라도 100점(완벽)으로 지었는지.
+//  이미 완벽하게 지은 레벨은 다시 지어도 공사 대금이 바뀌지 않는다 (같은 레벨로 돈을 계속 벌 수 없게).
+//  완벽하지 않았던 레벨은 다시 지으면 더 많이 받은 경우에만 그 차이만큼 지갑이 늘어난다(최고 기록만 남기므로).
+export function mergeProgress(old = {}, p) {
+  return {
+    ...old,
+    completed: Boolean(old.completed || p.completed),
+    stars: Math.max(old.stars ?? 0, p.stars ?? 0),
+    perfect: Boolean(old.perfect || p.perfect),
+    bestPay: old.perfect ? (old.bestPay ?? 0) : Math.max(old.bestPay ?? 0, p.finalPay ?? 0),
+  };
+}
+
 // 지갑: 레벨마다 가장 많이 받은 최종 공사 대금(점수 기준)을 더한다 → 같은 레벨을 반복해도 계속 쌓이지는 않는다
 export function walletPoints(progress) {
   return Object.values(progress).reduce((s, p) => s + (p.bestPay ?? 0), 0);

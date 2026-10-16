@@ -42,7 +42,7 @@ function conditionStatus(cond, result) {
 //  mode 'accept' : 레벨 시작 전. 예상 청구 비용(견적)을 정하고 "수락" 도장을 눌러 공사를 시작한다.
 //  mode 'view'   : 플레이 중 다시 보기. 이미 찍힌 도장이 보이고, X 또는 확인으로 닫는다.
 // prediction은 내부적으로 점수(0~100)이고, 화면에는 돈으로 보여 준다.
-export default function OrderSheet({ level, mode, prediction, onPredictionChange, onAccept, onClose, result }) {
+export default function OrderSheet({ level, mode, prediction, onPredictionChange, onAccept, onClose, result, alreadyPerfect = false }) {
   const [stamping, setStamping] = useState(false);
   const timer = useRef(null);
   useEffect(() => () => clearTimeout(timer.current), []);
@@ -77,6 +77,13 @@ export default function OrderSheet({ level, mode, prediction, onPredictionChange
             <span>{level.client}</span>
           </div>
         </header>
+
+        {alreadyPerfect && (
+          <p className="receipt-warning" role="note">
+            <b>이미 완공한 건물이에요.</b> 전에 완벽하게 완공해서 공사 대금을 받았기 때문에, 이번에는 연습으로 짓고 공사 대금은
+            받지 않아요.
+          </p>
+        )}
 
         <hr className="receipt-rule" />
 

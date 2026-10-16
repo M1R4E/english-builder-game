@@ -45,6 +45,11 @@ export const MAX_STARS = STAR_THRESHOLDS.length;
 export const ESTIMATE_TOLERANCE = 10; // 이만큼(점수 기준)까지의 차이는 차감하지 않는다
 export const ESTIMATE_PENALTY_RATE = 0.5; // 봐주는 범위를 넘은 차이 중 이 비율만큼 뺀다
 
+// ── 고쳐서 다시 제출했을 때의 공사 대금 ──
+// 첫 제출보다 점수가 오른 만큼 중 이 비율만 더 준다 (예: 75점 → 고쳐서 100점: 75 + 25 × 0.8 = 95)
+// → 고쳐서 완벽해져도 처음부터 완벽하게 지은 경우(100)보다 조금 적다.
+export const RETRY_PAY_RATE = 0.8;
+
 // 예상 청구 비용과 첫 청구 금액의 차이(점수 기준)에 따른 견적 배지
 export const PREDICTION_BADGES = [
   { maxDiff: 10, label: '정확한 견적' },

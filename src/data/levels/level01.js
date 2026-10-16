@@ -26,6 +26,7 @@ export default {
   conditions: [
     {
       id: 'present',
+      short: '동사는 현재 시제',
       text: '고양이 씨는 이 집에서 매일 낮잠을 자요. 동사 방의 기둥은 지난 공사에서 남은 "옛날 자재" 말고, 매일 쓰는 "지금 자재"로 세워 주세요.',
       grammar: '평소에 늘 하는 일이므로, 동사를 현재 시제로 써요.',
       checkId: 'C1',

@@ -17,6 +17,7 @@ export default {
   conditions: [
     {
       id: 'present',
+      short: '두 동사 모두 현재 시제',
       text: '지금도 매일 아침 일어나는 일이에요. 두 층의 동사 방 기둥을 모두 "지금 자재"로 세워 주세요.',
       grammar: '지금도 반복되는 일이므로 두 절의 동사를 모두 현재 시제로 써요.',
       checkIds: ['C1', 'C2'],

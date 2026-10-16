@@ -17,6 +17,7 @@ export default {
   conditions: [
     {
       id: 'reason',
+      short: '계단은 이유를 잇는 접속사',
       text: '1층에서 2층으로 올라가는 계단은 "왜 그랬는지" 알려 주는 계단이어야 해요.',
       grammar: '뒤 절이 앞 절의 이유가 되도록, 이유를 나타내는 접속사를 써요.',
       checkId: 'C1',

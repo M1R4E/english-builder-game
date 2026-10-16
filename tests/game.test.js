@@ -64,8 +64,19 @@ describe('견적 오차 차감 (최종 공사 대금)', () => {
     expect(estimatePenalty(25)).toBe(7);
     const r = computeReward(100, [60, 100]);
     expect(r.estimatePenalty).toBe(15);
-    expect(r.finalPay).toBe(85);
+    expect(r.retryGain).toBe(32); // 고쳐서 늘어난 40점의 80%
+    expect(r.finalPay).toBe(60 + 32 - 15);
     expect(computeReward(0, [100]).finalPay).toBe(100);
+  });
+
+  it('고쳐서 완벽해지면 늘어난 만큼의 일부만 더해져, 처음부터 완벽한 경우보다 조금 적다', () => {
+    const firstTry = computeReward(100, [100]); // 견적도 정확, 처음부터 완벽
+    const fixed = computeReward(75, [75, 100]); // 견적은 첫 점수와 같고, 고쳐서 완벽
+    expect(firstTry.finalPay).toBe(100);
+    expect(fixed.finalPay).toBe(95); // 75 + 25 × 0.8
+    expect(fixed.finalPay).toBeLessThan(firstTry.finalPay);
+    // 여러 번 고쳐도 두 번 받지 않는다: 최고 점수 기준으로 한 번만 계산
+    expect(computeReward(75, [75, 90, 100]).finalPay).toBe(95);
   });
 
   it('최종 공사 대금은 모든 경우 0 이상, 최고 점수 이하의 정수', () => {

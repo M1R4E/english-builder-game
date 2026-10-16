@@ -25,6 +25,7 @@ export default {
   conditions: [
     {
       id: 'present',
+      short: '동사는 현재 시제',
       text: '미나는 지금도 늘 공부해요. 동사 방의 기둥은 "지금 자재"로 세워 주세요.',
       grammar: '늘 하는 일이므로 동사를 현재 시제로 써요.',
       checkId: 'C1',

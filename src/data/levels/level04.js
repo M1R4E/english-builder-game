@@ -17,6 +17,7 @@ export default {
   conditions: [
     {
       id: 'past',
+      short: '두 동사 모두 과거 시제',
       text: '어제 일을 기념하는 집이에요. 1층과 2층의 동사 방 기둥을 모두 "옛날 자재"로 세워 주세요.',
       grammar: '어제 있었던 일이므로 두 절의 동사를 모두 과거 시제로 써요.',
       checkIds: ['C1', 'C2'],

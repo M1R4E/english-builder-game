@@ -17,12 +17,14 @@ export default {
   conditions: [
     {
       id: 'no-door',
+      short: '목적어 앞에 전치사 없이',
       text: '강아지 씨는 공을 방 안에 바로 들여놓길 원해요. 목적어 방에는 출입문(to 같은 전치사)을 달지 말아 주세요.',
       grammar: 'like(좋아하다) 다음에는 전치사 없이 목적어를 바로 써요.',
       checkId: 'C1',
     },
     {
       id: 'present',
+      short: '동사는 현재 시제',
       text: '강아지 씨는 지금도 매일 공놀이를 해요. 동사 방의 기둥은 "지금 자재"로 세워 주세요.',
       grammar: '평소에 늘 그런 일이므로 동사를 현재 시제로 써요.',
       checkId: 'C2',

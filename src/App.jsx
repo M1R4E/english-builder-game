@@ -9,7 +9,7 @@ import { findLevel, LEVELS } from './data/levels/index.js';
 import { SURVEY } from './data/survey.js';
 import { pickNextLevel } from './game/progress.js';
 import { recommend, recordsToCsv } from './game/records.js';
-import { loadData, saveData, startNewPlayer, updatePlayer, upsertRecord, walletPoints } from './game/storage.js';
+import { loadData, mergeProgress, saveData, startNewPlayer, updatePlayer, upsertRecord, walletPoints } from './game/storage.js';
 
 // 고장 나지 않은(데이터 검사를 통과한) 레벨만
 const PLAYABLE = LEVELS.filter((e) => e.problems.length === 0).map((e) => e.level);
@@ -38,6 +38,7 @@ export default function App() {
   const [levelId, setLevelId] = useState(null);
   const [playKey, setPlayKey] = useState(0); // 레벨을 열 때마다 새 판
   const [playId, setPlayId] = useState(null); // 학습 기록 하나를 구분하는 번호 (레벨을 열 때마다 새로)
+  const [alreadyPerfect, setAlreadyPerfect] = useState(false); // 이미 완벽하게 지은 레벨을 다시 하는 중인지
 
   // 바뀔 때마다 저장
   useEffect(() => {
@@ -48,7 +49,9 @@ export default function App() {
   const { progress, records } = player;
   const level = levelId !== null ? findLevel(levelId) : null;
 
-  const openLevel = useCallback((id) => {
+  const openLevel = (id) => {
+    // 이미 완벽하게 지은 레벨인지는 레벨을 여는 순간 기준으로 정한다 (플레이 중에 바뀌지 않게)
+    setAlreadyPerfect(Boolean(progress[id]?.perfect));
     setData((d) =>
       updatePlayer(d, (p) => ({
         ...p,
@@ -58,20 +61,15 @@ export default function App() {
     setPlayId(`L${id}-${Date.now()}`);
     setPlayKey((k) => k + 1);
     setScreen('play');
-  }, []);
+  };
 
-  // 별·완공·최종 공사 대금은 더 좋은 기록만 남긴다
+  // 별·완공·최종 공사 대금은 더 좋은 기록만 남긴다 (game/storage.js의 mergeProgress)
   const handleProgress = useCallback((id, p) => {
     setData((d) =>
       updatePlayer(d, (pl) => {
         const old = pl.progress[id] ?? {};
-        const merged = {
-          ...old,
-          completed: Boolean(old.completed || p.completed),
-          stars: Math.max(old.stars ?? 0, p.stars),
-          bestPay: Math.max(old.bestPay ?? 0, p.finalPay ?? 0),
-        };
-        const same = ['completed', 'stars', 'bestPay'].every((k) => old[k] === merged[k]);
+        const merged = mergeProgress(old, p);
+        const same = ['completed', 'stars', 'bestPay', 'perfect'].every((k) => old[k] === merged[k]);
         return same ? pl : { ...pl, progress: { ...pl.progress, [id]: merged } };
       }));
   }, []);
@@ -124,6 +122,7 @@ export default function App() {
       <PlayScreen
         key={`${level.id}-${playKey}`}
         playId={playId}
+        alreadyPerfect={alreadyPerfect}
         level={level}
         settings={data.settings}
         onSettingsChange={setSettings}
@@ -141,7 +140,7 @@ export default function App() {
       {/* 메인 화면에서는 견본 건물이 1초마다 바뀌고, 우편함 화면에서는 작은 집 한 채가 흐릿하게 천천히 돈다 */}
       <ShowcaseBackground cycling={screen === 'title'} still={0} />
       {screen === 'title' ? (
-        <TitleScreen onStart={() => setScreen('mailbox')} />
+        <TitleScreen onStart={() => setScreen('mailbox')} onSettings={() => setSettingsOpen(true)} />
       ) : (
         <Mailbox
           levels={PLAYABLE}

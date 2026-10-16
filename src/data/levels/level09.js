@@ -17,6 +17,7 @@ export default {
   conditions: [
     {
       id: 'past',
+      short: '1층 동사는 과거 시제',
       text: '지난해에 끝난 공사예요. 1층 동사 방의 기둥은 "옛날 자재"로 세워 주세요.',
       grammar: '지난 일이므로 동사를 과거 시제로 써요.',
       checkId: 'C1',

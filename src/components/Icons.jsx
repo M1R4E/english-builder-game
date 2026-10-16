@@ -112,12 +112,25 @@ export function IconTrash() {
   );
 }
 
-// 톱니바퀴: 설정
+// 톱니바퀴: 설정 (톱니 8개가 달린 바퀴 + 가운데 구멍)
+// 톱니 모양은 바퀴 둘레를 16칸으로 나눠, 바깥(톱니)과 안쪽(골)을 번갈아 이어서 만든다.
+const GEAR_PATH = (() => {
+  const points = [];
+  const teeth = 8;
+  for (let i = 0; i < teeth * 4; i += 1) {
+    // 한 톱니 = [골 → 톱니 시작 → 톱니 끝 → 골] 네 점
+    const r = i % 4 === 1 || i % 4 === 2 ? 9.6 : 7.2;
+    const a = ((i - 0.5) / (teeth * 4)) * Math.PI * 2;
+    points.push(`${(12 + r * Math.cos(a)).toFixed(2)} ${(12 + r * Math.sin(a)).toFixed(2)}`);
+  }
+  return `M${points.join(' L')} Z`;
+})();
+
 export function IconGear() {
   return (
     <svg {...base}>
+      <path d={GEAR_PATH} />
       <circle cx="12" cy="12" r="3" />
-      <path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1 7 17M17 7l2.1-2.1" />
     </svg>
   );
 }

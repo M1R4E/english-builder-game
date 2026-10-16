@@ -34,6 +34,7 @@ export function buildRecord(level, session, extras = {}) {
     errorCategories: countBy(failed.map((c) => c.category)),
     errorChecks: [...new Set(failed.map((c) => c.id))],
     viewedAnswer: Boolean(extras.viewedAnswer),
+    alreadyPerfect: Boolean(extras.alreadyPerfect), // 이미 완벽하게 지은 레벨을 다시 한 판 (공사 대금 없음)
     selfExplain: extras.selfExplain ?? null, // { choice, correct }
   };
 }

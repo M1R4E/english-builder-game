@@ -109,6 +109,7 @@ export function validateLevel(level) {
       if (!conditionIds.has(id)) problems.push(`조건 ${cond.id}가 없는 특별 요청 항목 ${id}를 가리킴`);
     }
     if (!cond.text || !cond.grammar) problems.push(`조건 ${cond.id}에 text(건축 표현) 또는 grammar(문장에서의 뜻)가 없음`);
+    if (!cond.short) problems.push(`조건 ${cond.id}에 짧은 요약(short)이 없음 (플레이 화면 요약 칸에 표시)`);
   }
 
   if (!Array.isArray(level.hints.steps) || level.hints.steps.length === 0) problems.push('단계별 힌트가 없음');
