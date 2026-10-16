@@ -101,6 +101,8 @@ export default function PlayScreen({
   onRecord,
   nextLevel,
   onNext,
+  onSummary = null, // 결과 보고서 열기 (레벨을 하나 이상 완공했을 때만)
+  finalReady = false, // 모든 레벨을 완공했는지 (최종 결과 보고서)
 }) {
   const [state, dispatch] = useReducer(sessionReducer, level, createSession);
   const [orderOpen, setOrderOpen] = useState(false);
@@ -360,6 +362,8 @@ export default function PlayScreen({
           skipIntro={viewedFor === state.attempts.length}
           nextLevel={nextLevel}
           onNext={onNext}
+          onSummary={onSummary}
+          finalReady={finalReady}
         />
       )}
     </div>

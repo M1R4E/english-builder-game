@@ -94,11 +94,12 @@ export default function App() {
     [level?.id, progress],
   );
   // 결과 보고서: 레벨을 모두 완공하고 우편함으로 돌아오면 한 번 자동으로 뜬다. 그 전에도 버튼으로 볼 수 있다.
+  // (점검 보고서의 "최종 결과 보고서 보기"로 이미 봤다면 우편함에서 다시 뜨지 않는다)
   const summary = useMemo(() => summarize(PLAYABLE, progress, records), [progress, records]);
   const autoSummary = screen === 'mailbox' && summary.allCompleted && !player.summarySeen;
   const closeSummary = () => {
     setSummaryOpen(false);
-    if (autoSummary) setData((d) => updatePlayer(d, (pl) => ({ ...pl, summarySeen: true })));
+    if (summary.allCompleted && !player.summarySeen) setData((d) => updatePlayer(d, (pl) => ({ ...pl, summarySeen: true })));
   };
 
   const recommendation = useMemo(() => recommend(PLAYABLE, progress, records), [progress, records]);
@@ -127,8 +128,14 @@ export default function App() {
     />
   );
 
+  // 결과 보고서 창 (우편함, 레벨 점검 보고서 어디서 열어도 같은 창)
+  const summaryWindow = (summaryOpen || autoSummary) && (
+    <SummaryWindow summary={summary} player={data.currentPlayer} wallet={walletPoints(progress)} onClose={closeSummary} />
+  );
+
   if (screen === 'play' && level) {
     return (
+      <>
       <PlayScreen
         key={`${level.id}-${playKey}`}
         playId={playId}
@@ -141,7 +148,11 @@ export default function App() {
         onRecord={handleRecord}
         nextLevel={nextLevel}
         onNext={() => nextLevel && openLevel(nextLevel.id)}
+        onSummary={summary.completedCount > 0 ? () => setSummaryOpen(true) : null}
+        finalReady={summary.allCompleted}
       />
+      {summaryWindow}
+      </>
     );
   }
 
@@ -166,9 +177,7 @@ export default function App() {
           onSummary={summary.playedCount > 0 ? () => setSummaryOpen(true) : null}
         />
       )}
-      {(summaryOpen || autoSummary) && (
-        <SummaryWindow summary={summary} player={data.currentPlayer} wallet={walletPoints(progress)} onClose={closeSummary} />
-      )}
+      {summaryWindow}
       {settingsWindow}
       {needPreSurvey && (
         <SurveyWindow

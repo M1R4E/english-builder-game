@@ -73,6 +73,8 @@ export default function ResultWindow({
   alreadyPerfect = false,
   onViewBuilding,
   skipIntro = false, // 건물 다시 보기에서 돌아올 때는 연출 없이 바로
+  onSummary = null, // 결과 보고서 열기 (레벨을 하나 이상 완공했을 때만 → 오른쪽 위 구석 버튼)
+  finalReady = false, // 모든 레벨 완공 → "다음 레벨로" 자리에 "최종 결과 보고서 보기"
 }) {
   const { result } = attempt;
   // 완벽하게 지었으면 더 고칠 것이 없으므로 "건물 다시 보기"(건물만 보여 주는 화면), 아니면 "확인하고 고치기"
@@ -137,6 +139,11 @@ export default function ResultWindow({
   return (
     <Window title="점검 보고서" onClose={closeAction} className="result-window">
       {fireworks && <Fireworks />}
+      {onSummary && (
+        <button type="button" className="btn btn-ghost btn-small summary-corner" onClick={onSummary}>
+          {finalReady ? '최종 결과' : '중간 결과'}
+        </button>
+      )}
       {/* 연출 중에는 보고서 어디를 눌러도 빨리 감기 */}
       <div className={`report-body${stage < LAST ? ' is-playing' : ''}`} onClick={fastForward}>
 
@@ -301,10 +308,18 @@ export default function ResultWindow({
           <button type="button" className="btn btn-ghost" onClick={onExit}>
             우편함으로
           </button>
-          <button type="button" className={`btn ${nextLevel && reward.completed ? 'btn-ghost' : 'btn-primary'}`} onClick={closeAction}>
+          <button
+            type="button"
+            className={`btn ${(finalReady && onSummary) || (nextLevel && reward.completed) ? 'btn-ghost' : 'btn-primary'}`}
+            onClick={closeAction}
+          >
             {result.perfect ? '건물 다시 보기' : '확인하고 고치기'}
           </button>
-          {nextLevel && (
+          {finalReady && onSummary ? (
+            <button type="button" className="btn btn-primary" onClick={onSummary}>
+              최종 결과 보고서 보기
+            </button>
+          ) : nextLevel && (
             <button
               type="button"
               className={`btn ${reward.completed ? 'btn-primary' : 'btn-ghost'}`}

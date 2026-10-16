@@ -10,7 +10,9 @@ export default function Window({ title, onClose, children, variant = 'panel', la
     ref.current?.focus();
     if (!onClose) return undefined;
     const onKey = (e) => {
-      if (e.key === 'Escape') onClose();
+      // 창이 겹쳐 떠 있으면 맨 위 창만 닫는다
+      const backdrops = document.querySelectorAll('.window-backdrop');
+      if (e.key === 'Escape' && backdrops[backdrops.length - 1] === ref.current?.parentElement) onClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);

@@ -1294,3 +1294,5 @@ body {
 @media (pointer: coarse) {
   .mailbox-open-head .summary-open { min-height: 44px; }
 }
+/* 점검 보고서 오른쪽 위 구석(닫기 X 옆): 결과 보고서 바로 보기 */
+.result-window .summary-corner { position: absolute; top: 10px; right: 54px; z-index: 2; }
