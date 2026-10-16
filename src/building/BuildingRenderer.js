@@ -86,6 +86,56 @@ export class BuildingRenderer {
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     this.scene.add(ground);
+    this.addScenery();
+  }
+
+  // 주변 풍경: 덤불·돌·꽃(땅 가장자리)과 천천히 흘러가는 구름. 건물 밖에 있어서 완공 연출 때 같이 돌지 않는다.
+  // 위치는 매번 같도록 정해 둔다 (무작위 아님). 성능이 낮은 기기에서는 구름 수를 줄인다.
+  addScenery() {
+    const mesh = (geo, mat, x, y, z, sx = 1, sy = 1, sz = 1) => {
+      const m = new THREE.Mesh(geo, mat);
+      m.position.set(x, y, z);
+      m.scale.set(sx, sy, sz);
+      return m;
+    };
+    const around = (deg, r) => [Math.cos((deg * Math.PI) / 180) * r, Math.sin((deg * Math.PI) / 180) * r];
+    const scenery = new THREE.Group();
+    const bush = new THREE.IcosahedronGeometry(0.7, 0);
+    for (const [deg, r, k] of [[20, 10, 1], [70, 11.5, 0.8], [130, 10.5, 1.1], [200, 11, 0.9], [250, 9.5, 1], [320, 11, 1.2]]) {
+      const [x, z] = around(deg, r);
+      scenery.add(mesh(bush, MATERIALS.bush, x, 0.45 * k, z, k, 0.8 * k, k));
+    }
+    const rock = new THREE.DodecahedronGeometry(0.45, 0);
+    for (const [deg, r] of [[45, 9], [160, 12], [285, 10]]) {
+      const [x, z] = around(deg, r);
+      scenery.add(mesh(rock, MATERIALS.rock, x, 0.2, z, 1.2, 0.6, 1));
+    }
+    const stem = new THREE.CylinderGeometry(0.03, 0.03, 0.35, 4);
+    const petal = new THREE.IcosahedronGeometry(0.12, 0);
+    for (const [deg, r, i] of [[95, 8.5, 0], [100, 9.2, 1], [215, 8.8, 0], [340, 9, 1], [345, 8.4, 0]]) {
+      const [x, z] = around(deg, r);
+      scenery.add(mesh(stem, MATERIALS.leaves, x, 0.18, z));
+      scenery.add(mesh(petal, i ? MATERIALS.petalB : MATERIALS.petalA, x, 0.38, z));
+    }
+    scenery.traverse((m) => {
+      if (m.isMesh) m.castShadow = !this.lowPower;
+    });
+    this.scene.add(scenery);
+
+    // 구름: 납작한 덩어리 3개씩. tick에서 천천히 돈다.
+    this.clouds = new THREE.Group();
+    const puff = new THREE.IcosahedronGeometry(1, 0);
+    const cloudSpots = this.lowPower ? [[30, 16, 13], [210, 18, 15]] : [[30, 16, 13], [120, 19, 15], [210, 18, 14], [300, 17, 16]];
+    for (const [deg, r, y] of cloudSpots) {
+      const [x, z] = around(deg, r);
+      const c = new THREE.Group();
+      c.add(mesh(puff, MATERIALS.cloud, 0, 0, 0, 1.6, 0.7, 1.1));
+      c.add(mesh(puff, MATERIALS.cloud, 1.3, -0.2, 0.2, 1.1, 0.55, 0.9));
+      c.add(mesh(puff, MATERIALS.cloud, -1.2, -0.25, -0.1, 1, 0.5, 0.8));
+      c.position.set(x, y, z);
+      this.clouds.add(c);
+    }
+    this.scene.add(this.clouds);
   }
 
   // ── 자리 부품 누르기 ──
@@ -251,6 +301,9 @@ export class BuildingRenderer {
 
     // 고르고 있는 자리가 은은하게 깜빡인다
     MATERIALS.active.emissiveIntensity = 0.25 + 0.3 * (0.5 + 0.5 * Math.sin(now * 5));
+
+    // 구름이 아주 천천히 흘러간다
+    if (this.clouds) this.clouds.rotation.y = now * 0.01;
 
     if (this.celebration) {
       const t = Math.min(1, (now - this.celebration.startAt) / CELEBRATE_SECONDS);

@@ -58,9 +58,16 @@ function promptOf(room) {
 
 // 방 이름표: 짓기 전 "주어 ?", 짓는 중·다 지은 뒤 "주어 · the cat"
 // prompts가 켜져 있으면(쉬움) 짓기 전 이름표가 "주어 · 누가?"처럼 질문을 보여 준다
-function roomLabel(room, prompts = false) {
+// compact(작은 화면): 글자를 크게 보여 주는 대신 짧게 — "the cat"처럼 단어만, 아직 시작 전인 방은(지금 짓는 방 말고) 이름표를 숨긴다
+// 이름표를 붙이지 않을 때는 null을 돌려준다
+function roomLabel(room, prompts = false, compact = false) {
   const role = ROLE_LABELS[room.role];
   if (room.warn) return [`! ${role} 확인`, 'warn'];
+  if (compact) {
+    if (room.text) return [room.text, room.active ? 'active' : 'normal'];
+    if (!room.active && room.state === 'ghost') return null;
+    return [prompts ? promptOf(room) : `${role} ?`, room.active ? 'active' : 'ghost'];
+  }
   if (prompts && !room.text) return [`${role} · ${promptOf(room)}`, room.active ? 'active' : 'ghost'];
   if (room.state === 'ghost') return [`${role} ?`, room.active ? 'active' : 'ghost'];
   return [room.text ? `${role} · ${room.text}` : role, room.active ? 'active' : 'normal'];
@@ -140,9 +147,9 @@ function door(f, { room, cx, w }) {
   );
 }
 
-function label(f, { room, cx }, prompts) {
-  const [text, style] = roomLabel(room, prompts);
-  const s = makeLabel(text, style, 0.8);
+function label(f, { room, cx }, prompts, compact) {
+  const [text, style] = roomLabel(room, prompts, compact);
+  const s = makeLabel(text, style, compact ? 1.15 : 0.8);
   s.position.set(cx, floorY(f) + H + 0.35, D / 2 + 0.3);
   return asUnit(s, room.ref);
 }
@@ -170,7 +177,7 @@ function roof(f, width, isTop) {
 }
 
 // 접속사 계단: 건물 오른쪽 바깥에서 아래층과 위층을 잇는다.
-function stairs(st, x, labels) {
+function stairs(st, x, labels, compact = false) {
   const mat = st.active ? MATERIALS.active : st.state === 'ghost' ? MATERIALS.ghost : MATERIALS.stairs;
   const steps = 8;
   const rise = (H + SLAB) / steps;
@@ -179,9 +186,10 @@ function stairs(st, x, labels) {
   for (let k = 0; k < steps; k += 1) {
     g.add(box(0.9, 0.12, run + 0.02, mat, x, floorY(st.from) + (k + 1) * rise - 0.06, D / 2 - (k + 0.5) * run));
   }
-  if (labels) {
-    const text = st.warn ? '! 접속사 확인' : st.word ? `접속사 · ${st.word}` : '접속사 ?';
-    const s = makeLabel(text, st.warn ? 'warn' : st.active ? 'active' : st.word ? 'normal' : 'ghost', 0.8);
+  // 작은 화면(compact)에서는 단어만 크게, 시작 전 계단은(지금 짓는 계단 말고) 이름표를 숨긴다
+  if (labels && !(compact && !st.word && !st.active && !st.warn)) {
+    const text = st.warn ? '! 접속사 확인' : st.word ? (compact ? st.word : `접속사 · ${st.word}`) : '접속사 ?';
+    const s = makeLabel(text, st.warn ? 'warn' : st.active ? 'active' : st.word ? 'normal' : 'ghost', compact ? 1.15 : 0.8);
     s.position.set(x + 0.3, floorY(st.from) + (H + SLAB) / 2, 0.4);
     g.add(s);
   }
@@ -235,7 +243,8 @@ function withoutLabels(obj) {
 // ── 설계도 전체 → 부품 목록 ──
 // options.labels: false면 글자 표지판을 붙이지 않는다.
 // options.prompts: true면 짓기 전 방에 질문 안내(누가?, 무엇을?)를 보여 준다 (쉬움 난이도)
-export function buildParts(bp, { labels = true, prompts = false } = {}) {
+// options.compact: true면 작은 화면용 이름표(크고 짧게, 시작 전 방은 숨김)
+export function buildParts(bp, { labels = true, prompts = false, compact = false } = {}) {
   const parts = [];
   const add = (key, sig, create, delay = 0) =>
     parts.push({ key, sig: String(sig), delay, create: labels ? create : () => withoutLabels(create()) });
@@ -258,8 +267,8 @@ export function buildParts(bp, { labels = true, prompts = false } = {}) {
       if (room.det) add(`${key}-det`, `${room.det}-${where}`, () => plate(f, slot));
       if (room.prep) add(`${key}-prep`, `${room.prep}-${where}`, () => door(f, slot));
       if (labels) {
-        const [text, style] = roomLabel(room, prompts);
-        add(`${key}-label`, `${text}-${style}-${where}`, () => label(f, slot, prompts));
+        const shown = roomLabel(room, prompts, compact);
+        if (shown) add(`${key}-label`, `${shown.join("-")}-${compact}-${where}`, () => label(f, slot, prompts, compact));
       }
     });
     if (floor.roofed) add(`f${f}-roof`, `${floor.isTop}-${floor.width}`, () => roof(f, floor.width, floor.isTop));
@@ -267,7 +276,7 @@ export function buildParts(bp, { labels = true, prompts = false } = {}) {
 
   const stairX = width / 2 + 0.75;
   for (const st of bp.stairs) {
-    add(`stairs-${st.ref}`, `${st.state}-${st.active}-${st.word}-${st.warn}-${stairX}`, () => stairs(st, stairX, labels));
+    add(`stairs-${st.ref}`, `${st.state}-${st.active}-${st.word}-${st.warn}-${stairX}-${compact}`, () => stairs(st, stairX, labels, compact));
   }
 
   // 완공 장식: 깃발, 울타리, 나무는 건물이 다 지어진 다음에 마지막으로 등장한다

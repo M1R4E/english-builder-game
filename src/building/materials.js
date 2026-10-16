@@ -23,6 +23,11 @@ export const COLORS = {
   window: '#9fd3f0',
   door: '#9b6b43',
   rug: '#e9b8c8', // 카펫: 명사를 꾸미는 형용사
+  bush: '#7fbf68', // 주변 풍경: 덤불
+  rock: '#b8b2a7', // 주변 풍경: 돌
+  cloud: '#ffffff', // 주변 풍경: 구름
+  petalA: '#f2a7b8', // 주변 풍경: 꽃
+  petalB: '#ffd34d',
   tensePresent: '#e8c48f', // 동사 재질 = 시제: 현재는 밝은 나무 (지금 자재)
   tensePast: '#9a978f', // 과거는 회색 돌 (옛날 자재)
   tenseIng: '#8cc6e6', // -ing(진행)는 하늘색

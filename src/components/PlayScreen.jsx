@@ -38,6 +38,20 @@ function useHeight() {
   return [ref, height];
 }
 
+// 화면 크기 조건이 맞는지 (화면을 돌리거나 크기를 바꾸면 따라간다)
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(() => window.matchMedia?.(query).matches ?? false);
+  useEffect(() => {
+    const mq = window.matchMedia?.(query);
+    if (!mq) return undefined;
+    const update = () => setMatches(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, [query]);
+  return matches;
+}
+
 // 카드 판을 손잡이로 잡고 아래로 끌어내리기 (3D 화면을 넓게 보기)
 // 손잡이를 누르기만 하면(끌지 않으면) 내리기 ↔ 올리기를 바꾼다.
 function useDockDrag(dockHeight) {
@@ -98,6 +112,8 @@ export default function PlayScreen({
   const [viewedAnswer, setViewedAnswer] = useState(false); // 정답 예시를 봤는지 (기록용, 감점 없음)
   const [selfExplain, setSelfExplain] = useState(null); // 자기 설명 답 { choice, correct }
   const easy = settings.difficulty === 'easy';
+  // 작은 화면: 3D 이름표를 크고 짧게 (휴대폰 세로, 또는 높이가 낮은 휴대폰 가로)
+  const compact = useMediaQuery('(max-width: 640px), (max-height: 520px)');
   // 문법 단계의 짧은 설명: 쉬움은 항상, 보통은 초반 레벨만, 어려움은 숨김
   const grammarGloss = easy || (settings.difficulty === 'normal' && Boolean(level.scaffold?.showRoles));
   const [hintOpen, setHintOpen] = useState(false);
@@ -116,8 +132,8 @@ export default function PlayScreen({
 
   // 공정 선택 → 설계도 → 3D 부품 목록
   const { parts, bounds } = useMemo(
-    () => buildParts(makeBlueprint(level, state.choices, shownResult, { activeUnit }), { prompts: easy }),
-    [level, state.choices, shownResult, activeUnit, easy],
+    () => buildParts(makeBlueprint(level, state.choices, shownResult, { activeUnit }), { prompts: easy, compact }),
+    [level, state.choices, shownResult, activeUnit, easy, compact],
   );
 
   const scores = state.attempts.map((a) => a.result.total);

@@ -1209,3 +1209,54 @@ body {
 
 /* ===== 메인 화면의 설정 버튼 ===== */
 .title-settings { position: absolute; top: 12px; right: 12px; z-index: 6; }
+
+/* ===== 5단계: 반응형 다듬기 ===== */
+/* 카드 판의 간격을 줄여 3D 화면을 넓게 */
+.dock .sentence-preview { margin: 4px 0 0; font-size: 1.1rem; line-height: 1.35; }
+.dock .card-tray { margin-top: 6px; padding-top: 8px; }
+.dock .tray-head { margin-bottom: 6px; }
+.dock-tools { margin: 8px 0 6px; }
+
+/* 손가락으로 누르는 화면: 누르기 쉬운 크기(44px 이상) */
+@media (pointer: coarse) {
+  .icon-btn, .dock-tools .icon-btn { height: 44px; min-width: 44px; }
+  .progress-chip { height: 44px; }
+  .progress-chip.is-current { height: 44px; }
+  .order-summary-head { min-height: 44px; }
+  .word-card { min-height: 48px; }
+}
+
+/* 가로로 긴 낮은 화면(휴대폰 가로 등): 카드 판을 두 칸으로 나눠 높이를 줄인다
+   왼쪽: 문장 미리보기 + 자재 카드 / 오른쪽: 힌트·되돌리기·비우기 + 제출하기 */
+@media (max-height: 520px) and (min-width: 600px) {
+  .dock {
+    display: grid;
+    grid-template-columns: 1fr 190px;
+    grid-template-areas:
+      'handle handle'
+      'progress progress'
+      'preview tools'
+      'tray submit';
+    column-gap: 14px;
+    align-items: start;
+    max-height: 62vh;
+  }
+  .dock-handle { grid-area: handle; height: 16px; margin-bottom: 0; }
+  .dock .progress-bar { grid-area: progress; }
+  .dock .sentence-preview { grid-area: preview; font-size: 1rem; }
+  /* 자재 판 제목을 카드와 같은 줄에 두어 한 줄을 아낀다 */
+  .dock .card-tray { grid-area: tray; display: flex; align-items: center; gap: 10px; margin-top: 4px; padding-top: 6px; }
+  .dock .tray-head { flex: 0 1 38%; margin: 0; }
+  .dock .tray-title { font-size: 0.85rem; }
+  .dock .tray-note { display: none; }
+  .dock .tray-cards { flex: 1; }
+  .dock .word-card { min-height: 42px; }
+  .dock-tools { grid-area: tools; margin: 4px 0; justify-content: space-between; gap: 8px; }
+  .dock .submit { grid-area: submit; align-self: end; margin-top: 6px; }
+  .hud-top { padding: 6px 12px; }
+  .order-summary { top: 58px; }
+}
+
+/* 화면이 바뀔 때 부드럽게 나타나기 */
+.front, .play { animation: screen-in 0.35s ease-out; }
+@keyframes screen-in { from { opacity: 0; } to { opacity: 1; } }
